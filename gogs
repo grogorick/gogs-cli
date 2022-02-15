@@ -1,0 +1,40 @@
+#!/bin/bash
+
+
+# config ----------
+
+token_filename=gogs-api-token.txt
+
+
+# utils ----------
+
+function get-gogs-api-token {
+	if [ -f "$token_filename" ]; then
+		gogs_token=$(cat "$token_filename")
+	elif [ -f "$token_filename.gpg" ]; then
+		gogs_token=$(gpg -q -d "$token_filename.gpg")
+	else
+		echo No Gogs API token found \($token_filename\[.gpg\]\).
+		echo Your can create one here: $server/user/settings/applications
+		read -sp "Token: " gogs_token
+	fi
+}
+
+
+# cmd interface ----------
+
+function print-help {
+	echo \*\* Gogs command line util \*\*
+}
+
+if [ $# -gt 0 ]; then
+	action=$1
+	shift
+	case $action in
+		--help) print-help ;;
+		--) action=$1; shift; get-gogs-api-token; $action "$@" ;;
+		*) echo Unrecognized action: \"$action\" ;;
+	esac
+else
+	print-help
+fi
