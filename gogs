@@ -57,15 +57,36 @@ function gogs-curl {
 }
 
 
+# actions ----------
+
+function create-org-repo {
+	gogs-curl POST /org/$1/repos "{\"name\":\"$2\",\"description\":\"$3\",\"private\":$4}"
+}
+
+function create-user-repo {
+	gogs-curl POST /admin/users/$1/repos "{\"name\":\"$2\",\"description\":\"$3\",\"private\":$4}"
+}
+
+
 # cmd interface ----------
 
 function print-help {
 	echo \*\* Gogs command line util \*\*
+	echo
+	echo create-org-repo
+	echo create-user-repo
 }
 
 if [ $# -gt 0 ]; then
 	action=$1
 	shift
+	for a in create-org-repo create-user-repo; do
+		if [ "$a" == "$action" ] && [ "$a" != "-" ]; then
+			get-gogs-api-token
+			$action "$@"
+			exit 0
+		fi
+	done
 	case $action in
 		--help) print-help ;;
 		--) action=$1; shift; get-gogs-api-token; $action "$@" ;;
