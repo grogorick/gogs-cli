@@ -4,9 +4,22 @@
 # config ----------
 
 token_filename=gogs-api-token.txt
+server="https://try.gogs.io" # replaced by environment variable GOGS_SERVER_URL if set
 
 
 # utils ----------
+
+if [ -n "$GOGS_SERVER_URL" ]; then
+	server="$GOGS_SERVER_URL"
+fi
+
+debug=0
+while [ -n "$1" ] && [[ "$1" == "-"* ]] && [ "$1" != "--" ]; do
+	case "$1" in
+		-d) debug=1; echo DRY RUN: doing nothing ;;
+	esac
+	shift
+done
 
 function get-gogs-api-token {
 	if [ -f "$token_filename" ]; then
@@ -17,6 +30,29 @@ function get-gogs-api-token {
 		echo No Gogs API token found \($token_filename\[.gpg\]\).
 		echo Your can create one here: $server/user/settings/applications
 		read -sp "Token: " gogs_token
+	fi
+}
+
+function gogs-curl {
+	method=$1
+	cmd=$2
+	data="$3"
+	auth="?token=$gogs_token"
+	address=$server"/api/v1"$cmd$auth
+
+	if [ $debug -eq 1 ]; then
+		echo $method
+		echo -e "\tcommand: $cmd"
+		echo -e "\taddress: $address"
+		echo -e "\tdata:    $data"
+	else
+		echo
+		sleep 1s
+		if [ -n "$data" ]; then
+			curl -d "$data" -H "Content-Type: application/json" -X $method "$address" --insecure 2> /dev/null
+		else
+			curl -X $method "$address" --insecure 2> /dev/null
+		fi
 	fi
 }
 
