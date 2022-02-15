@@ -56,24 +56,31 @@ function gogs-curl {
 	fi
 }
 
+function syntax-help {
+	if [ $1 -gt $(( $# - 2 )) ]; then
+		echo Required argument\(s\): $2
+			exit 0
+			fi
+}
+
 
 # actions ----------
 
-# org-name repo-name description private:true/false
 actions=$actions" create-org-repo"
 function create-org-repo {
+	syntax-help 4 "org-name repo-name description private:true/false" "$@"
 	gogs-curl POST /org/$1/repos "{\"name\":\"$2\",\"description\":\"$3\",\"private\":$4}"
 }
 
-# user-name repo-name description private:true/false
 actions=$actions" create-user-repo"
 function create-user-repo {
+	syntax-help 4 "user-name repo-name description private:true/false" "$@"
 	gogs-curl POST /admin/users/$1/repos "{\"name\":\"$2\",\"description\":\"$3\",\"private\":$4}"
 }
 
-# user/org-name repo-name
 actions=$actions" delete-repo"
 function delete-repo {
+	syntax-help 2 "user/org-name repo-name" "$@"
 	gogs-curl DELETE /repos/$1/$2
 }
 
