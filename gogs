@@ -59,14 +59,22 @@ function gogs-curl {
 
 # actions ----------
 
+# org-name repo-name description private:true/false
 actions=$actions" create-org-repo"
 function create-org-repo {
 	gogs-curl POST /org/$1/repos "{\"name\":\"$2\",\"description\":\"$3\",\"private\":$4}"
 }
 
+# user-name repo-name description private:true/false
 actions=$actions" create-user-repo"
 function create-user-repo {
 	gogs-curl POST /admin/users/$1/repos "{\"name\":\"$2\",\"description\":\"$3\",\"private\":$4}"
+}
+
+# user/org-name repo-name
+actions=$actions" delete-repo"
+function delete-repo {
+	gogs-curl DELETE /repos/$1/$2
 }
 
 
