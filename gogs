@@ -84,6 +84,14 @@ function delete-repo {
 	gogs-curl DELETE /repos/$1/$2
 }
 
+actions=$actions" -"
+
+actions=$actions" create-team"
+function create-team {
+	syntax-help 3 "org-name team-name description [permission: read/write/admin]" "$@"
+	gogs-curl POST /admin/orgs/$1/teams "{\"name\":\"$2\",\"description\":\"$3\",\"permission\":\"$4\"}"
+}
+
 
 # cmd interface ----------
 
