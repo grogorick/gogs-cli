@@ -166,6 +166,12 @@ function remove-collaborator {
 	gogs-curl DELETE /repos/$1/$2/collaborators/$3
 }
 
+actions=$actions" list-collaborators"
+function list-collaborators {
+	syntax-help 2 "user/org-name repo-name" "$@"
+	gogs-curl GET /repos/$1/$2/collaborators | split-json "}," "{" | json-property username
+}
+
 actions=$actions" -"
 
 actions=$actions" add-team-member"
@@ -178,6 +184,12 @@ actions=$actions" remove-team-member"
 function remove-team-member {
 	syntax-help 2 "team-id user-name" "$@"
 	gogs-curl DELETE /admin/teams/$1/members/$2
+}
+
+actions=$actions" list-team-members"
+function list-team-members {
+	syntax-help 1 "team-id" "$@"
+	gogs-curl GET /admin/teams/$1/members | split-json "}," "{" | json-property username
 }
 
 actions=$actions" -"
