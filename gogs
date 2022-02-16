@@ -94,6 +94,20 @@ function create-team {
 
 actions=$actions" -"
 
+actions=$actions" add-collaborator"
+function add-collaborator {
+	syntax-help 3 "user/org-name repo-name user-name [permission: read/write/admin]" "$@"
+	gogs-curl PUT /repos/$1/$2/collaborators/$3 "{\"permission\":\"$4\"}"
+}
+
+actions=$actions" remove-collaborator"
+function remove-collaborator {
+	syntax-help 3 "user/org-name repo-name user-name" "$@"
+	gogs-curl DELETE /repos/$1/$2/collaborators/$3
+}
+
+actions=$actions" -"
+
 actions=$actions" add-team-member"
 function add-team-member {
 	syntax-help 2 "team-id user-name" "$@"
