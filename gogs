@@ -63,6 +63,14 @@ function syntax-help {
 			fi
 }
 
+function split-json {
+	if [ $# -gt 2 ]; then
+		echo "$3"
+	else
+		cat
+	fi | sed "s/$1$2/$1\n$2/g"
+}
+
 function json-property {
 	if [ $# -gt 1 ]; then
 		echo "$2"
@@ -99,6 +107,18 @@ function delete-repo {
 	gogs-curl DELETE /repos/$1/$2
 }
 
+actions=$actions" list-org-repos"
+function list-org-repos {
+	syntax-help 1 "org-name" "$@"
+	gogs-curl GET /orgs/$1/repos | split-json "}}," "{" | json-property name
+}
+
+actions=$actions" list-user-repos"
+function list-user-repos {
+	syntax-help 1 "user-name" "$@"
+	gogs-curl GET /users/$1/repos | split-json "}}," "{" | json-property name
+}
+
 actions=$actions" -"
 
 actions=$actions" get-repo"
@@ -123,7 +143,7 @@ function create-team {
 actions=$actions" get-team-id"
 function get-team-id {
 	syntax-help 2 "org-name team-name" "$@"
-	echo -n $(gogs-curl GET /orgs/$1/teams | sed "s/},{/},\n{/g" | grep "\"name\":\"$2\"" | json-property id)
+	echo -n $(gogs-curl GET /orgs/$1/teams | split-json "}," "{" | grep "\"name\":\"$2\"" | json-property id)
 }
 
 actions=$actions" -"
