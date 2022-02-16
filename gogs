@@ -92,6 +92,20 @@ function create-team {
 	gogs-curl POST /admin/orgs/$1/teams "{\"name\":\"$2\",\"description\":\"$3\",\"permission\":\"$4\"}"
 }
 
+actions=$actions" -"
+
+actions=$actions" add-team-member"
+function add-team-member {
+	syntax-help 2 "team-id user-name" "$@"
+	gogs-curl PUT /admin/teams/$1/members/$2
+}
+
+actions=$actions" remove-team-member"
+function remove-team-member {
+	syntax-help 2 "team-id user-name" "$@"
+	gogs-curl DELETE /admin/teams/$1/members/$2
+}
+
 
 # cmd interface ----------
 
