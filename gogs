@@ -106,6 +106,20 @@ function remove-team-member {
 	gogs-curl DELETE /admin/teams/$1/members/$2
 }
 
+actions=$actions" -"
+
+actions=$actions" add-team-repo"
+function add-team-repo {
+	syntax-help 2 "team-id repo-name" "$@"
+	gogs-curl PUT /admin/teams/$1/repos/$2
+}
+
+actions=$actions" remove-team-repo"
+function remove-team-repo {
+	syntax-help 2 "team-id repo-name" "$@"
+	gogs-curl DELETE /admin/teams/$1/repos/$2
+}
+
 
 # cmd interface ----------
 
