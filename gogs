@@ -63,6 +63,21 @@ function syntax-help {
 			fi
 }
 
+function json-property {
+	if [ $# -gt 1 ]; then
+		echo "$2"
+	else
+		cat
+	fi | sed -nE "s/^.*\"$1\":(\
+(true)|\
+(false)|\
+([0-9]+)|\
+\"([^\"]+)\"|\
+(\{[^}]+\})|\
+(\[[^]]+\])\
+).*$/\2\3\4\5\6\7/p"
+}
+
 
 # actions ----------
 
@@ -82,6 +97,19 @@ actions=$actions" delete-repo"
 function delete-repo {
 	syntax-help 2 "user/org-name repo-name" "$@"
 	gogs-curl DELETE /repos/$1/$2
+}
+
+actions=$actions" -"
+
+actions=$actions" get-repo"
+function get-repo {
+	syntax-help 2 "user/org-name repo-name [property]" "$@"
+	json="$(gogs-curl GET /repos/$1/$2)"
+	if [ -z $3 ]; then
+		echo "$json"
+	else
+		echo "$json" | json-property "$3"
+	fi
 }
 
 actions=$actions" -"
