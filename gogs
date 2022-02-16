@@ -120,6 +120,12 @@ function create-team {
 	gogs-curl POST /admin/orgs/$1/teams "{\"name\":\"$2\",\"description\":\"$3\",\"permission\":\"$4\"}"
 }
 
+actions=$actions" get-team-id"
+function get-team-id {
+	syntax-help 2 "org-name team-name" "$@"
+	echo -n $(gogs-curl GET /orgs/$1/teams | sed "s/},{/},\n{/g" | grep "\"name\":\"$2\"" | json-property id)
+}
+
 actions=$actions" -"
 
 actions=$actions" add-collaborator"
