@@ -132,6 +132,12 @@ function get-repo {
 	fi
 }
 
+actions=$actions" enable-issues"
+function enable-issues {
+	syntax-help 3 "user/org-name repo-name enable:true/false" "$@"
+	gogs-curl PATCH /repos/$1/$2/issue-tracker "{\"enable_issues\":$3}"
+}
+
 actions=$actions" -"
 
 actions=$actions" create-team"
