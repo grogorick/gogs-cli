@@ -235,7 +235,10 @@ function get-raw {
 # cmd interface ----------
 
 function print-help {
+	echo
 	echo \*\* Gogs command line util \*\*
+	echo
+	echo "  "----------
 	echo
 	for action in $actions; do
 		if [ "$action" == "-" ]; then
@@ -244,6 +247,12 @@ function print-help {
 			echo "  "$action
 		fi
 	done
+	echo
+	echo "  "----------
+	echo
+	echo "  "Currently configured server: $server
+	echo "  "\(Change via environment variable GOGS_SERVER_URL\)
+	echo
 }
 
 if [ $# -gt 0 ]; then
