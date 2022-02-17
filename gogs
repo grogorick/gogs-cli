@@ -219,6 +219,12 @@ function get-commit {
 	fi
 }
 
+actions=$actions" get-raw"
+function get-raw {
+	syntax-help 3 "user/org-name repo-name ref" "$@"
+	gogs-curl GET /repos/$1/$2/raw/$3
+}
+
 
 # cmd interface ----------
 
