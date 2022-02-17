@@ -206,6 +206,19 @@ function remove-team-repo {
 	gogs-curl DELETE /admin/teams/$1/repos/$2
 }
 
+actions=$actions" -"
+
+actions=$actions" get-commit"
+function get-commit {
+	syntax-help 3 "user/org-name repo-name branch/tag/sha [property]" "$@"
+	json="$(gogs-curl GET /repos/$1/$2/commits/$3)"
+	if [ -z $4 ]; then
+		echo "$json"
+	else
+		echo "$json" | json-property "$4"
+	fi
+}
+
 
 # cmd interface ----------
 
