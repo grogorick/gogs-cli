@@ -3,33 +3,43 @@
 
 # config ----------
 
-token_filename=gogs-api-token.txt
-server="https://try.gogs.io" # replaced by environment variable GOGS_SERVER_URL if set
+gogs_token=""
+gogs_token_envvar=GOGS_API_TOKEN
+gogs_token_filename=gogs-api-token.txt
+
+gogs_server="" # https://try.gogs.io
+gogs_server_envvar=GOGS_SERVER_URL
+gogs_server_filename=gogs-server-url.txt
 
 
 # utils ----------
 
-if [ -n "$GOGS_SERVER_URL" ]; then
-	server="$GOGS_SERVER_URL"
-fi
+function configure {
+	# server url
+	if [ -n "$(printenv $gogs_server_envvar)" ]; then
+		gogs_server=$(printenv $gogs_server_envvar)
+	elif [ -f "$gogs_server_filename" ]; then
+		gogs_server=$(cat "$gogs_server_filename")
+	elif [ $# -eq 0 ]; then
+		echo No Gogs server URL \(e.g. https://try.gogs.io\) configured.
+		read -p "URL: " gogs_server
+		echo
+		if [ -z "$gogs_server" ]; then exit 0; fi
+	fi
 
-debug=0
-while [ -n "$1" ] && [[ "$1" == "-"* ]] && [ "$1" != "--" ]; do
-	case "$1" in
-		-d) debug=1; echo DRY RUN: doing nothing ;;
-	esac
-	shift
-done
-
-function get-gogs-api-token {
-	if [ -f "$token_filename" ]; then
-		gogs_token=$(cat "$token_filename")
-	elif [ -f "$token_filename.gpg" ]; then
-		gogs_token=$(gpg -q -d "$token_filename.gpg")
-	else
-		echo No Gogs API token found \($token_filename\[.gpg\]\).
-		echo Your can create one here: $server/user/settings/applications
+	# api token
+	if [ -n "$(printenv $gogs_token_envvar)" ]; then
+		gogs_token=$(printenv $gogs_token_envvar)
+	elif [ -f "$gogs_token_filename" ]; then
+		gogs_token=$(cat "$gogs_token_filename")
+	elif [ -f "$gogs_token_filename.gpg" ]; then
+		gogs_token=$(gpg -q -d "$gogs_token_filename.gpg")
+	elif [ $# -eq 0 ]; then
+		echo No Gogs API token configured.
 		read -sp "Token: " gogs_token
+		echo
+		echo
+		if [ -z "$gogs_token" ]; then exit 0; fi
 	fi
 }
 
@@ -38,7 +48,7 @@ function gogs-curl {
 	cmd=$2
 	data="$3"
 	auth="?token=$gogs_token"
-	address=$server"/api/v1"$cmd$auth
+	address=$gogs_server"/api/v1"$cmd$auth
 
 	if [ $debug -eq 1 ]; then
 		echo $method
@@ -247,27 +257,42 @@ function print-help {
 			echo "  "$action
 		fi
 	done
+	configure do-not-ask-if-not-configured
 	echo
 	echo "  "----------
 	echo
-	echo "  "Currently configured server: $server
-	echo "  "\(Change via environment variable GOGS_SERVER_URL\)
+	echo "  "Current configuration:
+	echo
+	echo -e "  "Server: $(if [ -z "$gogs_server" ]; then echo "\033[0;31m"NOT-CONFIGURED"\033[0m"; fi)$gogs_server
+	echo "  "\(Change via environment variable $gogs_server_envvar or $gogs_server_filename\)
+	echo
+	echo -e "  "API token: $(if [ -z "$gogs_token" ]; then echo "\033[0;31m"NOT-CONFIGURED"\033[0m"; else echo ${gogs_token:0:5}...; fi)
+	echo "  "\(Change via environment variable $gogs_token_envvar or $gogs_token_filename[.gpg]\)
+	echo "  "\(Create one here: $(if [ -z "$gogs_server" ]; then echo https://YOUR.GOGS.SERVER; fi)$gogs_server/user/settings/applications\)
 	echo
 }
+
+debug=0
+while [ -n "$1" ] && [[ "$1" == "-"* ]] && [ "$1" != "--" ]; do
+	case "$1" in
+		-d) debug=1; echo DRY RUN: doing nothing ;;
+	esac
+	shift
+done
 
 if [ $# -gt 0 ]; then
 	action=$1
 	shift
 	for a in $actions; do
 		if [ "$a" == "$action" ] && [ "$a" != "-" ]; then
-			get-gogs-api-token
+			configure
 			$action "$@"
 			exit 0
 		fi
 	done
 	case $action in
 		--help) print-help ;;
-		--) action=$1; shift; get-gogs-api-token; $action "$@" ;;
+		--) action=$1; shift; configure; $action "$@" ;;
 		*) echo Unrecognized action: \"$action\" ;;
 	esac
 else
