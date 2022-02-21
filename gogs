@@ -246,7 +246,7 @@ function get-raw {
 
 function print-help {
 	echo
-	echo \*\* Gogs command line util \*\*
+	echo \*\* Gogs command line interface \*\*
 	echo
 	echo "  "----------
 	echo
