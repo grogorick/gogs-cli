@@ -97,7 +97,7 @@ function json-property {
 		echo "$2"
 	else
 		cat
-	fi | sed -nE "s/^.*\"$1\":(\
+	fi | sed "0,/\"$1\"/{s/\"$1\"/@@@/}" | sed -nE "s/^.*@@@:(\
 (true)|\
 (false)|\
 ([0-9]+)|\
