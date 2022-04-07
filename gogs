@@ -43,6 +43,17 @@ function configure {
 	fi
 }
 
+function run_curl_and_log {
+	if [ $dev -eq 1 ]; then
+		echo "$@" > log_curl_cmd.txt
+		output=$("$@" 2> log_error.txt)
+		echo "$output" > log_curl_response.txt
+		echo -n "$output"
+	else
+		"$@" 2> /dev/null
+	fi
+}
+
 function gogs-curl {
 	method=$1
 	cmd=$2
@@ -59,9 +70,9 @@ function gogs-curl {
 		echo
 		sleep 1s
 		if [ -n "$data" ]; then
-			curl -d "$data" -H "Content-Type: application/json" -X $method "$address" --insecure 2> /dev/null
+			run_curl_and_log curl -d "$data" -H "Content-Type: application/json" -X $method "$address" --insecure
 		else
-			curl -X $method "$address" --insecure 2> /dev/null
+			run_curl_and_log curl -X $method "$address" --insecure
 		fi
 	fi
 }
@@ -135,10 +146,14 @@ actions=$actions" get-repo"
 function get-repo {
 	syntax-help 2 "user/org-name repo-name [property]" "$@"
 	json="$(gogs-curl GET /repos/$1/$2)"
-	if [ -z $3 ]; then
+	if [ $debug -eq 1 ]; then
 		echo "$json"
 	else
-		echo "$json" | json-property "$3"
+		if [ -z $3 ]; then
+			echo "$json"
+		else
+			echo "$json" | json-property "$3"
+		fi
 	fi
 }
 
@@ -165,7 +180,12 @@ function list-teams {
 actions=$actions" get-team-id"
 function get-team-id {
 	syntax-help 2 "org-name team-name" "$@"
-	echo -n $(gogs-curl GET /orgs/$1/teams | split-json "}," "{" | grep "\"name\":\"$2\"" | json-property id)
+	teams="$(gogs-curl GET /orgs/$1/teams)"
+	if [ $debug -eq 1 ]; then
+		echo "$teams"
+	else
+		echo -n $(echo "$teams" | split-json "}," "{" | grep "\"name\":\"$2\"" | json-property id)
+	fi
 }
 
 actions=$actions" -"
@@ -228,10 +248,14 @@ actions=$actions" get-commit"
 function get-commit {
 	syntax-help 3 "user/org-name repo-name branch/tag/sha [property]" "$@"
 	json="$(gogs-curl GET /repos/$1/$2/commits/$3)"
-	if [ -z $4 ]; then
+	if [ $debug -eq 1 ]; then
 		echo "$json"
 	else
-		echo "$json" | json-property "$4"
+		if [ -z $4 ]; then
+			echo "$json"
+		else
+			echo "$json" | json-property "$4"
+		fi
 	fi
 }
 
@@ -273,26 +297,43 @@ function print-help {
 }
 
 debug=0
+dev=0
 while [ -n "$1" ] && [[ "$1" == "-"* ]] && [ "$1" != "--" ]; do
 	case "$1" in
-		-d) debug=1; echo DRY RUN: doing nothing ;;
+		-d) debug=1; echo \# DRY RUN \(doing nothing\) ;;
+		-D) dev=1; echo \# DEV RUN ;;
 	esac
 	shift
 done
+
+function run_action {
+	action=$1
+	if [ $dev -eq 1 ]; then
+		echo \# action: $action
+	fi
+	configure
+	if [ $dev -eq 1 ]; then
+		echo \# configured \| URL: $gogs_server \| Token: $gogs_token
+	fi
+	"$@"
+}
 
 if [ $# -gt 0 ]; then
 	action=$1
 	shift
 	for a in $actions; do
 		if [ "$a" == "$action" ] && [ "$a" != "-" ]; then
-			configure
-			$action "$@"
+			run_action $action "$@"
 			exit 0
 		fi
 	done
 	case $action in
 		--help) print-help ;;
-		--) action=$1; shift; configure; $action "$@" ;;
+		--)
+			action=$1
+			shift
+			run_action $action "$@"
+			;;
 		*) echo Unrecognized action: \"$action\" ;;
 	esac
 else
