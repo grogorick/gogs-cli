@@ -113,6 +113,12 @@ function json-property {
 ).*$/\2\3\4\5\6\7/p"
 }
 
+function per-line {
+	cat | while IFS='' read -r line; do
+		echo $line | $1
+	done
+}
+
 
 # actions ----------
 
@@ -137,13 +143,23 @@ function delete-repo {
 actions=$actions" list-org-repos"
 function list-org-repos {
 	syntax-help 1 "org-name" "$@"
-	gogs-curl GET /orgs/$1/repos | split-json "}}," "{" | json-property name
+	json=$(gogs-curl GET /orgs/$1/repos)
+	if [ $debug -eq 1 ]; then
+		echo "$json"
+	else
+		echo "$json" | split-json "}}," "{" | per-line "json-property name"
+	fi
 }
 
 actions=$actions" list-user-repos"
 function list-user-repos {
 	syntax-help 1 "user-name" "$@"
-	gogs-curl GET /users/$1/repos | split-json "}}," "{" | json-property name
+	json=$(gogs-curl GET /users/$1/repos)
+	if [ $debug -eq 1 ]; then
+		echo "$json"
+	else
+		echo "$json" | split-json "}}," "{" | per-line "json-property name"
+	fi
 }
 
 actions=$actions" -"
@@ -152,14 +168,10 @@ actions=$actions" get-repo"
 function get-repo {
 	syntax-help 2 "user/org-name repo-name [property]" "$@"
 	json="$(gogs-curl GET /repos/$1/$2)"
-	if [ $debug -eq 1 ]; then
+	if [ $debug -eq 1 ] || [ -z $3 ]; then
 		echo "$json"
 	else
-		if [ -z $3 ]; then
-			echo "$json"
-		else
-			echo "$json" | json-property "$3"
-		fi
+		echo "$json" | json-property "$3"
 	fi
 }
 
@@ -180,7 +192,12 @@ function create-team {
 actions=$actions" list-teams"
 function list-teams {
 	syntax-help 1 "org-name" "$@"
-	gogs-curl GET /orgs/$1/teams | split-json "}," "{" | json-property name
+	json=$(gogs-curl GET /orgs/$1/teams)
+	if [ $debug -eq 1 ]; then
+		echo "$json"
+	else
+		echo "$json" | split-json "}," "{" | per-line "json-property name"
+	fi
 }
 
 actions=$actions" get-team-id"
@@ -211,7 +228,12 @@ function remove-collaborator {
 actions=$actions" list-collaborators"
 function list-collaborators {
 	syntax-help 2 "user/org-name repo-name" "$@"
-	gogs-curl GET /repos/$1/$2/collaborators | split-json "}," "{" | json-property username
+	json=$(gogs-curl GET /repos/$1/$2/collaborators)
+	if [ $debug -eq 1 ]; then
+		echo "$json"
+	else
+		echo "$json" | split-json "}," "{" | per-line "json-property username"
+	fi
 }
 
 actions=$actions" -"
@@ -231,7 +253,12 @@ function remove-team-member {
 actions=$actions" list-team-members"
 function list-team-members {
 	syntax-help 1 "team-id" "$@"
-	gogs-curl GET /admin/teams/$1/members | split-json "}," "{" | json-property username
+	json=$(gogs-curl GET /admin/teams/$1/members)
+	if [ $debug -eq 1 ]; then
+		echo "$json"
+	else
+		echo "$json" | split-json "}," "{" | per-line "json-property username"
+	fi
 }
 
 actions=$actions" -"
