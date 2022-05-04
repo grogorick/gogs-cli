@@ -80,8 +80,8 @@ function gogs-curl {
 function syntax-help {
 	if [ $1 -gt $(( $# - 2 )) ]; then
 		echo Required argument\(s\): $2
-			exit 0
-			fi
+		exit 0
+	fi
 }
 
 function split-json {
