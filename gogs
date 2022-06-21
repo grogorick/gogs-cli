@@ -11,7 +11,7 @@ gogs_server="" # https://try.gogs.io
 gogs_server_envvar=GOGS_SERVER_URL
 gogs_server_filename=gogs-server-url.txt
 
-
+debug=1
 # utils ----------
 
 function configure {
@@ -77,6 +77,29 @@ function gogs-curl {
 	fi
 }
 
+function gogs-curl_basic {
+	method=$1
+	auth=$2
+	cmd=$3
+	data="$4"
+	address=$gogs_server"/api/v1"$cmd
+
+	if [ $debug -eq 1 ]; then
+		echo $method
+		echo -e "\tauth: $auth"
+		echo -e "\taddress: $address"
+		echo -e "\tdata:    $data"
+	else
+		echo
+		sleep 1s
+		if [ -n "$data" ]; then
+			run_curl_and_log curl -u $auth -d "$data" -H "Content-Type: application/json" -X $method "$address" --insecure
+		else
+			run_curl_and_log curl -u $auth -X $method "$address" --insecure
+		fi
+	fi
+}
+
 function syntax-help {
 	if [ $1 -gt $(( $# - 2 )) ]; then
 		echo Required argument\(s\): $2
@@ -121,6 +144,23 @@ function per-line {
 
 
 # actions ----------
+
+actions=$actions" get-org"
+function get-org {
+	syntax-help 1 "org-name" "$@"
+	json=$(gogs-curl GET /orgs/$1)
+	if [ $debug -eq 1 ]; then
+		echo "$json"
+	else
+		echo "$json" | json-property "username"
+	fi
+}
+
+actions=$actions" create-org"
+function create-org {
+	syntax-help 1 "org-name" "$@"
+	gogs-curl POST /admin/users/administrator/orgs "{\"username\":\"$1\"}"
+}
 
 actions=$actions" create-org-repo"
 function create-org-repo {
@@ -273,6 +313,39 @@ actions=$actions" remove-team-repo"
 function remove-team-repo {
 	syntax-help 2 "team-id repo-name" "$@"
 	gogs-curl DELETE /admin/teams/$1/repos/$2
+}
+
+actions=$actions" get-user"
+function get-user {
+	syntax-help 1 "user-name" "$@"
+	json=$(gogs-curl GET /users/$1)
+	if [ $debug -eq 1 ]; then
+		echo "$json"
+	else
+		echo "$json" | json-property "username"
+	fi
+}
+
+actions=$actions" create-user"
+function create-user {
+	syntax-help 3 "user-name email password" "$@"
+	gogs-curl POST /admin/users "{\"username\": \"$1\", \"email\": \"$2\", \"password\":\"$3\"}"
+}
+
+actions=$actions" create-user-token"
+function create-user-token {
+	syntax-help 3 "user-name password token-name" "$@"
+	gogs-curl_basic POST "$1:$2" /users/$1/tokens "{\"name\":\"$3\"}"
+}
+
+actions=$actions" create-mirror"
+function create-mirror {
+	syntax-help 5 "clone-address repo-name uid private mirror [optionnal: user password]" "$@"
+	if [ -z "$6" ]; then
+		gogs-curl POST /repos/migrate "{\"clone_addr\": \"$1\", \"repo_name\": \"$2\", \"uid\": $3, \"private\": $4, \"mirror\": $5}"
+	else
+		gogs-curl POST /repos/migrate "{\"clone_addr\": \"$1\", \"repo_name\": \"$2\", \"uid\": $3, \"private\": $4, \"mirror\": $5, \"auth_username\":\"$6\", \"auth_password\":\"$7\"}"
+	fi
 }
 
 actions=$actions" -"
