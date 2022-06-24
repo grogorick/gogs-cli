@@ -174,7 +174,7 @@ function create-org {
 		echo "org already exist"
 		exit_code=0
 	elif [[ $? -eq 1 ]]; then
-		output=`gogs-curl POST /admin/users/administrator/orgs "{\"userame\":\"$1\"}"`
+		output=`gogs-curl POST /admin/users/administrator/orgs "{\"username\":\"$1\"}"`
 		
 		test=`echo "$output" | json-property "message"`
 		if [[ -z $test ]]; then
