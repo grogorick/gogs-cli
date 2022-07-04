@@ -148,19 +148,16 @@ actions=$actions" get-org"
 function get-org {
 	syntax-help 1 "org-name property" "$@"
 	json=$(gogs-curl GET /orgs/$1)
-
 	if [[ ! -z $2 ]]; then
 		test=`echo "$json" | json-property "$2"`
 	else 
 		test=`echo "$json"`
 	fi
-
 	if [[ -z $test ]]; then
 		exit_code=1
 	else
 		exit_code=0
 	fi
-	
 	echo $test
 	return $exit_code
 }
@@ -171,25 +168,25 @@ function create-org {
 
 	get-org $1 > /dev/null 2>&1
 	if [[ $? -eq 0 ]]; then
-		echo "org already exist"
+		output="org already exist"
 		exit_code=0
 	elif [[ $? -eq 1 ]]; then
 		output=`gogs-curl POST /admin/users/administrator/orgs "{\"username\":\"$1\"}"`
 		
 		test=`echo "$output" | json-property "message"`
 		if [[ -z $test ]]; then
-			echo $output
 			exit_code=0
 		else
-			echo $output
+		
 			exit_code=1
 		fi
 	else
-		echo "Cannot retrieve org"
+		output="Cannot retrieve org"
 		exit_code=2
 	fi
 
-	return $exit_code
+	echo $output
+	exit $exit_code
 }
 
 actions=$actions" create-org-repo"
@@ -268,25 +265,24 @@ function create-team {
 
 	get-team $1 $2 > /dev/null 2>&1
 	if [[ $? -eq 0 ]]; then
-		echo "org already exist"
+		output="org already exist"
 		exit_code=0
 	elif [[ $? -eq 1 ]]; then
 		output=`gogs-curl POST /admin/orgs/$1/teams "{\"name\":\"$2\",\"description\":\"$3\",\"permission\":\"$4\"}"`
 		
 		test=`echo "$output" | json-property "message"`
 		if [[ -z $test ]]; then
-			echo $output
 			exit_code=0
 		else
-			echo $output
 			exit_code=1
 		fi
 	else
-		echo "Cannot retrieve org"
+		output="Cannot retrieve org"
 		exit_code=2
 	fi
 
-	return $exit_code
+	echo $output
+	exit $exit_code
 }
 
 actions=$actions" list-teams"
@@ -369,8 +365,7 @@ function add-collaborator {
 
 
 	echo $message
-	return $exit_code
-
+	exit $exit_code
 }
 
 actions=$actions" remove-collaborator"
@@ -428,7 +423,7 @@ function add-team-member {
 	fi
 
 	echo $message
-	return $exit_code
+	exit $exit_code
 }
 
 actions=$actions" remove-team-member"
@@ -516,7 +511,7 @@ function create-user {
 	fi
 
 	echo $message
-	return $exit_code
+	exit $exit_code
 }
 
 actions=$actions" create-user-token"
@@ -542,7 +537,7 @@ function create-user-token {
 	fi
 
 	echo $message
-	return $exit_code
+	exit $exit_code
 }
 
 actions=$actions" create-mirror"
@@ -565,7 +560,7 @@ function create-mirror {
 	fi
 
 	echo $message
-	return $exit_code
+	exit $exit_code
 }
 
 actions=$actions" -"
