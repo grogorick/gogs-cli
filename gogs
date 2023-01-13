@@ -145,6 +145,92 @@ function per-line {
 	done
 }
 
+# sanity checks ----------
+
+function check-org-exists {
+	get-org $1 > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		echo Organization \`$1\` already exists
+		return 1
+	fi
+	return 0
+}
+function check-org-exists-not {
+	response=`get-org $1`
+	if [ $? -ne 0 ]; then
+		echo "$response"
+		return 1
+	fi
+	return 0
+}
+
+function check-user-exists {
+	get-user $1 > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		echo User \`$1\` already exists
+		return 1
+	fi
+	return 0
+}
+function check-user-exists-not {
+	response=`get-user $1`
+	if [ $? -ne 0 ]; then
+		echo "$response"
+		return 1
+	fi
+	return 0
+}
+
+function check-user-org-exists {
+	get-user $1 > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		echo User/Organization \`$1\` already exists
+		return 1
+	fi
+	return 0
+}
+function check-user-org-exists-not {
+	get-user $1 > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+		echo User/Organization \`$1\` does NOT exist
+		return 1
+	fi
+	return 0
+}
+
+function check-repo-exists {
+	get-repo $1 $2 > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		echo Repository \`$1/$2\` already exists
+		return 1
+	fi
+	return 0
+}
+function check-repo-exists-not {
+	response=`get-repo $1 $2`
+	if [ $? -ne 0 ]; then
+		echo "$response"
+		return 1
+	fi
+	return 0
+}
+
+function check-team-exists {
+	get-team $1 $2 > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		echo Team \`$1:$2\` already exists
+		return 1
+	fi
+	return 0
+}
+function check-team-exists-not {
+	response=`get-team $1 $2`
+	if [ $? -ne 0 ]; then
+		echo "$response"
+		return 1
+	fi
+	return 0
+}
 
 # actions ----------
 
