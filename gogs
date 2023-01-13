@@ -429,12 +429,8 @@ function create-team {
 actions=$actions" list-teams"
 function list-teams {
 	syntax-help 1 "org-name" "$@"
-	json=$(gogs-curl GET /orgs/$1/teams)
-	if [ $debug -eq 1 ]; then
-		echo "$json"
-	else
-		echo "$json" | split-json "}," "{" | per-line "json-property name"
-	fi
+
+	get-teams $1 name
 }
 
 actions=$actions" get-teams"
