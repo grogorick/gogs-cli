@@ -403,7 +403,13 @@ function get-repo {
 actions=$actions" enable-issues"
 function enable-issues {
 	syntax-help 3 "user/org-name repo-name enable:true/false" "$@"
-	gogs-curl PATCH /repos/$1/$2/issue-tracker "{\"enable_issues\":$3}"
+
+	check-user-org-exists-not $1; return-exit-code-if-error
+	check-repo-exists-not $1 $2; return-exit-code-if-error
+
+	output=`gogs-curl PATCH /repos/$1/$2/issue-tracker "{\"enable_issues\":$3}"`
+
+	echo-and-exit-code--error-if-message "$output"
 }
 
 actions=$actions" -"
