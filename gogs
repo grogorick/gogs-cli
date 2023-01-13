@@ -339,7 +339,13 @@ function create-repo {
 actions=$actions" delete-repo"
 function delete-repo {
 	syntax-help 2 "user/org-name repo-name" "$@"
-	gogs-curl DELETE /repos/$1/$2
+
+	check-user-org-exists-not $1; return-exit-code-if-error
+	check-repo-exists-not $1 $2; return-if-error
+
+	output=`gogs-curl DELETE /repos/$1/$2`
+
+	echo-and-exit-code--error-if-message "$output"
 }
 
 actions=$actions" list-org-repos"
