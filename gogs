@@ -100,9 +100,13 @@ function gogs-curl_basic {
 }
 
 function syntax-help {
-	if [ $1 -gt $(( $# - 2 )) ]; then
-		echo Required argument\(s\): $2
-		exit 0
+	if [ $1 -gt $(( $# - 2 )) ] || [ "$3" = "--help" ]; then
+		if [ -z "$2" ]; then
+			echo Syntax: \(no arguments\)
+		else
+			echo Syntax: $2
+		fi
+		exit 1
 	fi
 }
 
