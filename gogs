@@ -366,11 +366,15 @@ function list-org-repos {
 actions=$actions" list-user-repos"
 function list-user-repos {
 	syntax-help 1 "user-name" "$@"
-	json=$(gogs-curl GET /users/$1/repos)
-	if [ $debug -eq 1 ]; then
-		echo "$json"
+
+	check-user-exists-not $1; return-exit-code-if-error
+
+	response=`gogs-curl GET /users/$1/repos`
+
+	if is-dev; then
+		echo "$response"
 	else
-		echo "$json" | split-json "}}," "{" | per-line "json-property name"
+		echo "$response" | split-json "}}," "{" | per-line "json-property name"
 	fi
 }
 
