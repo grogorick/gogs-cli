@@ -234,6 +234,33 @@ function check-team-exists-not {
 	return 0
 }
 
+function check-empty {
+	if [ -z "$1" ]; then
+		return 1
+	fi
+	return 0
+}
+function echo-and-exit-code--error-if-empty {
+	if [ ! -z "$1" ]; then
+		echo "$1"
+	fi
+	check-empty "$1"
+}
+
+function check-message {
+	test=`echo "$1" | json-property message`
+	if [ -z "$test" ]; then
+		return 0
+	fi
+	return 1
+}
+function echo-and-exit-code--error-if-message {
+	if [ ! -z "$1" ]; then
+		echo "$1"
+	fi
+	check-message "$1"
+}
+
 alias return-if-error='
 	if [ $? -ne 0 ]; then
 		return 0
