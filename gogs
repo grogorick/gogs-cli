@@ -300,31 +300,16 @@ function get-org {
 	echo-and-exit-code--error-if-empty "$output"
 }
 
-actions=$actions" create-org"
+actions=$actions" (admin) create-org"
 function create-org {
-	syntax-help 1 "org-name" "$@"
+	syntax-help 2 "org-name owner-user-name" "$@"
 
-	get-org $1 > /dev/null 2>&1
-	if [[ $? -eq 0 ]]; then
-		output="org already exist"
-		exit_code=0
-	elif [[ $? -eq 1 ]]; then
-		output=`gogs-curl POST /admin/users/administrator/orgs "{\"username\":\"$1\"}"`
-		
-		test=`echo "$output" | json-property "message"`
-		if [[ -z $test ]]; then
-			exit_code=0
-		else
-		
-			exit_code=1
-		fi
-	else
-		output="Cannot retrieve org"
-		exit_code=2
-	fi
+	check-org-exists $1; return-if-error
+	check-user-exists-not $2; return-exit-code-if-error
 
-	echo $output
-	exit $exit_code
+	output=`gogs-curl POST /admin/users/$2/orgs "{\"username\":\"$1\"}"`
+
+	echo-and-exit-code--error-if-message "$output"
 }
 
 actions=$actions" create-org-repo"
