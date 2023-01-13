@@ -315,7 +315,13 @@ function create-org {
 actions=$actions" create-org-repo"
 function create-org-repo {
 	syntax-help 4 "org-name repo-name description private:true/false" "$@"
-	gogs-curl POST /org/$1/repos "{\"name\":\"$2\",\"description\":\"$3\",\"private\":$4}"
+
+	check-org-exists-not $1; return-exit-code-if-error
+	check-repo-exists $1 $2; return-if-error
+
+	output=`gogs-curl POST /org/$1/repos "{\"name\":\"$2\",\"description\":\"$3\",\"private\":$4}"`
+
+	echo-and-exit-code--error-if-message "$output"
 }
 
 actions=$actions" create-user-repo"
