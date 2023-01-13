@@ -45,7 +45,7 @@ function configure {
 function run_curl_and_log {
 	if [ $dev -eq 1 ]; then
 		echo "$@" > log_curl_cmd.txt
-		output=$("$@" 2> log_error.txt)
+		output=`"$@" 2> log_error.txt`
 		echo "$output" > log_curl_response.txt
 		echo -n "$output"
 	else
@@ -596,7 +596,7 @@ function print-help {
 	echo "  "----------
 	echo
 	for action in $actions; do
-		if [ "$action" == "-" ]; then
+		if [ "$action" = "-" ]; then
 			echo
 		else
 			echo "  "$action
@@ -619,7 +619,7 @@ function print-help {
 
 debug=0
 dev=0
-while [ -n "$1" ] && [[ "$1" == "-"* ]] && [ "$1" != "--" ]; do
+while [ -n "$1" ] && [[ "$1" = "-"* ]] && [ "$1" != "--" ]; do
 	case "$1" in
 		-d) debug=1; echo \# DRY RUN \(doing nothing\) ;;
 		-D) dev=1; echo \# DEV RUN ;;
@@ -643,7 +643,7 @@ if [ $# -gt 0 ]; then
 	action=$1
 	shift
 	for a in $actions; do
-		if [ "$a" == "$action" ] && [ "$a" != "-" ]; then
+		if [ "$a" = "$action" ] && [ "$a" != "-" ]; then
 			run_action $action "$@"
 			exit $?
 		fi
@@ -655,7 +655,7 @@ if [ $# -gt 0 ]; then
 			shift
 			run_action $action "$@"
 			;;
-		*) echo Unrecognized action: \"$action\" ;;
+		*) echo Unrecognized action: \`$action\` ;;
 	esac
 else
 	print-help
