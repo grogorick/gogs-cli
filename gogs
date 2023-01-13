@@ -147,6 +147,13 @@ function per-line {
 	done
 }
 
+function is-dev {
+	if [ $dev -gt 0 ]; then
+		return 0
+	fi
+	return 1
+}
+
 # sanity checks ----------
 
 function check-org-exists {
