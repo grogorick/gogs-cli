@@ -351,11 +351,15 @@ function delete-repo {
 actions=$actions" list-org-repos"
 function list-org-repos {
 	syntax-help 1 "org-name" "$@"
-	json=$(gogs-curl GET /orgs/$1/repos)
-	if [ $debug -eq 1 ]; then
-		echo "$json"
+
+	check-org-exists-not $1; return-exit-code-if-error
+
+	response=`gogs-curl GET /orgs/$1/repos`
+
+	if is-dev; then
+		echo "$response"
 	else
-		echo "$json" | split-json "}}," "{" | per-line "json-property name"
+		echo "$response" | split-json "}}," "{" | per-line "json-property name"
 	fi
 }
 
