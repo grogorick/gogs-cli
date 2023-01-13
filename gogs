@@ -13,6 +13,8 @@ gogs_server_filename=gogs-server-url.txt
 
 # utils ----------
 
+shopt -s expand_aliases
+
 function configure {
 	# server url
 	if [ -n "$(printenv $gogs_server_envvar)" ]; then
@@ -231,6 +233,18 @@ function check-team-exists-not {
 	fi
 	return 0
 }
+
+alias return-if-error='
+	if [ $? -ne 0 ]; then
+		return 0
+	fi
+	'
+alias return-exit-code-if-error='
+	check_error=$?
+	if [ $check_error -ne 0 ]; then
+		return $check_error
+	fi
+	'
 
 # actions ----------
 
