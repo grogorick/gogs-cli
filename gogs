@@ -435,18 +435,19 @@ function list-teams {
 
 actions=$actions" get-teams"
 function get-teams {
-	syntax-help 1 "org-name property" "$@"
-	json=$(gogs-curl GET /orgs/$1/teams)
-	test=`echo "$json"`
+	syntax-help 1 "org-name [property]" "$@"
 
-	if [[ -z $test ]]; then
-		exit_code=1
+	check-org-exists-not $1; return-exit-code-if-error
+
+	response=`gogs-curl GET /orgs/$1/teams`
+
+	if [ -z $2 ] || is-dev; then
+		output="$response"
 	else
-		exit_code=0
+		output=`echo "$response" | split-json "}," "{" | per-line "json-property $2"`
 	fi
 
-	echo $test
-	return $exit_code
+	echo-and-exit-code--error-if-empty "$output"
 }
 
 actions=$actions" get-team"
