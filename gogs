@@ -284,20 +284,20 @@ alias return-exit-code-if-error='
 
 actions=$actions" get-org"
 function get-org {
-	syntax-help 1 "org-name property" "$@"
-	json=$(gogs-curl GET /orgs/$1)
-	if [[ ! -z $2 ]]; then
-		test=`echo "$json" | json-property "$2"`
-	else 
-		test=`echo "$json"`
-	fi
-	if [[ -z $test ]]; then
-		exit_code=1
+	syntax-help 1 "org-name [property]" "$@"
+
+	response=`gogs-curl GET /orgs/$1`
+
+	if [ -z "$response" ]; then
+		echo Organization \`$1\` does NOT exist
+		return 1
+	elif [ -z $2 ] || is-dev; then
+		output="$response"
 	else
-		exit_code=0
+		output=`echo "$response" | json-property "$2"`
 	fi
-	echo $test
-	return $exit_code
+
+	echo-and-exit-code--error-if-empty "$output"
 }
 
 actions=$actions" create-org"
