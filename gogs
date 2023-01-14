@@ -474,6 +474,17 @@ function create-org-repo {
 	echo-and-exit-code--error-if-message "$output"
 }
 
+actions=$actions" create-own-repo"
+function create-own-repo {
+	syntax-help 3 "repo-name description private:true/false" "$@"
+
+	check-repo-exists $1 $2; return-if-error
+
+	output=`gogs-curl POST /user/repos "{\"name\":\"$1\",\"description\":\"$2\",\"private\":$3}"`
+
+	echo-and-exit-code--error-if-message "$output"
+}
+
 actions=$actions" (admin) create-repo"
 function create-repo {
 	syntax-help 4 "user/org-name repo-name description private:true/false" "$@"
