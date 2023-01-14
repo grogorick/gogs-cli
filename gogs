@@ -474,36 +474,15 @@ actions=$actions" -"
 
 actions=$actions" add-collaborator"
 function add-collaborator {
-	syntax-help 3 "user/org-name repo-name user-name [permission: read/write/admin]" "$@"
+	syntax-help 3 "user/org-name repo-name user-name [permission:read/write/admin]" "$@"
 
-	get-repo $1 $2 > /dev/null 2>&1
-
-	if [[ $? -ne 0 ]]; then
-		echo "Cannot retrieve repository $1/$2, please ensure the repository already exist"
-		return 1
-	fi
-
-	get-user $1 > /dev/null 2>&1
-
-	if [[ $? -ne 0 ]]; then
-		echo "Cannot retrieve user $3, please ensure the user already exist"
-		return 1
-	fi
+	check-user-org-exists-not $1; return-exit-code-if-error
+	check-repo-exists-not $1 $2; return-exit-code-if-error
+	check-user-exists-not $3; return-exit-code-if-error
 
 	output=`gogs-curl PUT /repos/$1/$2/collaborators/$3 "{\"permission\":\"$4\"}"`
-	error=`echo "$output" | json-property "message"`
 
-	if [[ -z $error ]]; then
-		message=$output
-		exit_code=0
-	else
-		message="ERROR: $error"
-		exit_code=1
-	fi
-
-
-	echo $message
-	exit $exit_code
+	echo-and-exit-code--error-if-message "$output"
 }
 
 actions=$actions" remove-collaborator"
