@@ -581,10 +581,15 @@ function list-team-members {
 
 actions=$actions" -"
 
-actions=$actions" add-team-repo"
+actions=$actions" (admin) add-team-repo"
 function add-team-repo {
-	syntax-help 2 "team-id repo-name" "$@"
-	gogs-curl PUT /admin/teams/$1/repos/$2
+	syntax-help 2 "(org-name team-name | team-id) repo-name" "$@"
+
+	resolve-team-id-and-following-name "$@"; return-exit-code-if-error
+
+	output=`gogs-curl PUT /admin/teams/$id/repos/$name`
+
+	echo-and-exit-code--error-if-message "$output"
 }
 
 actions=$actions" remove-team-repo"
