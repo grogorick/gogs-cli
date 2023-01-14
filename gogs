@@ -605,22 +605,20 @@ function remove-team-repo {
 
 actions=$actions" get-user"
 function get-user {
-	syntax-help 1 "user-name property" "$@"
-	json=$(gogs-curl GET /users/$1)
-	if [ $debug -eq 1 ] || [ -z $2 ]; then
-		test=`echo "$json"`
+	syntax-help 1 "user-name [property]" "$@"
+
+	response=`gogs-curl GET /users/$1`
+
+	if [ -z "$response" ]; then
+		echo User \`$1\` does NOT exist
+		return 1
+	elif [ -z $2 ] || is-dev; then
+		output="$response"
 	else
-		test=`echo "$json" | json-property "$2"`
+		output=`echo "$response" | json-property "$2"`
 	fi
 
-	if [[ -z $test ]]; then
-		exit_code=1
-	else
-		exit_code=0
-	fi
-
-	echo $test
-	return $exit_code
+	echo-and-exit-code--error-if-empty "$output"
 }
 
 actions=$actions" create-user"
