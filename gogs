@@ -562,24 +562,21 @@ function remove-team-member {
 	echo-and-exit-code--error-if-message "$output"
 }
 
-actions=$actions" list-team-members"
+actions=$actions" (admin) list-team-members"
 function list-team-members {
-	syntax-help 1 "team-id" "$@"
-	json=$(gogs-curl GET /admin/teams/$1/members)
-	if [ $debug -eq 1 ]; then
-		test=`echo "$json"`
-	else
-		test=`echo "$json" | split-json "}," "{" | per-line "json-property username"`
-	fi
+	syntax-help 1 "org-name team-name | team-id" "$@"
 
-	if [[ -z $test ]]; then
-		exit_code=1
-	else
-		exit_code=0
-	fi
+	resolve-team-id-and-following-name "$@" _; return-exit-code-if-error
 
-	echo $test
-	return $exit_code
+	response=`gogs-curl GET /admin/teams/$id/members`
+
+	response=`echo "$response" | split-json "}," "{"`
+
+	if is-dev; then
+		echo "$response"
+	else
+		echo "$response" | per-line "json-property username"
+	fi
 }
 
 actions=$actions" -"
