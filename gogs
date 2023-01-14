@@ -541,6 +541,19 @@ function list-user-repos {
 
 actions=$actions" -"
 
+actions=$actions" list-own-repos"
+function list-own-repos {
+	syntax-help 0 "" "$@"
+
+	response=`gogs-curl GET /user/repos`
+
+	if is-dev; then
+		echo "$response"
+	else
+		echo "$response" | split-json "}}," "{" | per-line "json-property name"
+	fi
+}
+
 actions=$actions" get-repo"
 function get-repo {
 	syntax-help 2 "user/org-name repo-name [property]" "$@"
