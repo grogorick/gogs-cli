@@ -314,6 +314,19 @@ function resolve-team-id-and-following-name {
 	return 0
 }
 
+function resolve-user-org-id {
+	if is-number $1; then
+		echo $1
+	else
+		check-user-org-exists-not $1; return-exit-code-if-error
+
+		response=`get-user $1 id`
+
+		echo $response
+	fi
+	return 0
+}
+
 function resolve-or-input-password {
 	if [ $debug -eq 1 ]; then
 		password=PASSWORD
@@ -679,25 +692,18 @@ function create-api-token {
 
 actions=$actions" create-mirror"
 function create-mirror {
-	syntax-help 5 "clone-address repo-name uid private mirror [optionnal: user password]" "$@"
-	if [ -z "$6" ]; then
-		output=`gogs-curl POST /repos/migrate "{\"clone_addr\": \"$1\", \"repo_name\": \"$2\", \"uid\": $3, \"private\": $4, \"mirror\": $5}"`
-	else
-		output=`gogs-curl POST /repos/migrate "{\"clone_addr\": \"$1\", \"repo_name\": \"$2\", \"uid\": $3, \"private\": $4, \"mirror\": $5, \"auth_username\":\"$6\", \"auth_password\":\"$7\"}"`
+	syntax-help 6 "clone-url repo-name (owner-user/org-name | -id) private:true/false mirror:true/false description [user-name password]" "$@"
+
+	owner=`resolve-user-org-id $3`
+
+	request="\"clone_addr\":\"$1\",\"repo_name\":\"$2\",\"uid\":$owner,\"private\":$4,\"mirror\":$5,\"description\":\"$6\""
+	if [ ! -z "$7" ]; then
+		request="$request,\"auth_username\":\"$7\",\"auth_password\":\"$8\""
 	fi
 
-	error=`echo "$output" | json-property "message"`
+	output=`gogs-curl POST /repos/migrate {"$request"}`
 
-	if [[ -z $error ]]; then
-		message=$output
-		exit_code=0
-	else
-		message="ERROR: $error"
-		exit_code=1
-	fi
-
-	echo $message
-	exit $exit_code
+	echo-and-exit-code--error-if-message "$output"
 }
 
 actions=$actions" -"
