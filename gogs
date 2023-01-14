@@ -34,7 +34,7 @@ function configure {
 	elif [ -f "$gogs_token_filename" ]; then
 		gogs_token=$(cat "$gogs_token_filename")
 	elif [ -f "$gogs_token_filename.gpg" ]; then
-		gogs_token=$(gpg -q -d "$gogs_token_filename.gpg")
+		gogs_token=$(gpg -q -d "$gogs_token_filename.gpg" 2>/dev/null)
 	elif [ $# -eq 0 ]; then
 		echo No Gogs API token configured.
 		read -sp "Token: " gogs_token
@@ -929,8 +929,6 @@ function print-help {
 	echo
 	echo "  "----------
 	echo
-	echo "  "Current configuration:
-	echo
 	echo -e "  "Server: `if [ -z "$gogs_server" ]; then echo "\033[0;31m"NOT-CONFIGURED"\033[0m"; fi`$gogs_server
 	if [ ! -z "$gogs_server" ]; then echo -en "\033[0;90m"; fi
 	echo -n "  "\(Change via environment variable $gogs_server_envvar or $gogs_server_filename\)
@@ -941,6 +939,19 @@ function print-help {
 	echo    "  "\(Change via environment variable $gogs_token_envvar or $gogs_token_filename[.gpg]\)
 	echo -n "  "\(Create one here: `if [ -z "$gogs_server" ]; then echo https://YOUR.GOGS.SERVER; fi`$gogs_server/user/settings/applications\)
 	if [ ! -z "$gogs_token" ]; then echo -e "\033[0m"; fi
+
+	if [ ! -z "$gogs_server" ] && [ ! -z "$gogs_token" ]; then
+		echo
+		echo "  "Authenticated as:
+		echo -n "  ... "
+		response=`get-token-user`
+		r_login=`echo "$response" | json-property username`
+		r_name=`echo "$response" | json-property full_name`
+		r_email=`echo "$response" | json-property email`
+		echo -en "\r  $r_login"
+		if [ ! -z "$r_name" ]; then echo -n " ($r_name)"; fi
+		echo " / $r_email"
+	fi
 }
 
 debug=0
