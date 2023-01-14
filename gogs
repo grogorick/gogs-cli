@@ -146,6 +146,15 @@ function json-property {
 ).*$/\2\3\4\5\6\7/p"
 }
 
+function json-properties {
+	json="`</dev/stdin`"
+	for i in $(seq 1 $#); do
+		echo -n "$json" | json-property ${!i}
+		echo -n " "
+	done
+	echo
+}
+
 function per-line {
 	cat | while IFS='' read -r line; do
 		echo $line | $1
@@ -816,6 +825,25 @@ function create-api-token {
 		echo "$response"
 	else
 		echo "$response" | json-property sha1
+	fi
+}
+
+actions=$actions" list-api-tokens"
+function list-api-tokens {
+	syntax-help 1 "user-name [password]" "$@"
+
+	check-user-exists-not $1; return-exit-code-if-error
+
+	resolve-or-input-password "$2"
+
+	response=`gogs-curl-basic GET "$1:$password" /users/$1/tokens`
+
+	check-message "$response"; return-exit-code-if-error
+
+	if is-dev; then
+		echo "$response"
+	else
+		echo "$response" | split-json "}," "{" | per-line "json-properties sha1 name"
 	fi
 }
 
