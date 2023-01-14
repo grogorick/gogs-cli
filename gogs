@@ -501,11 +501,16 @@ function remove-collaborator {
 actions=$actions" list-collaborators"
 function list-collaborators {
 	syntax-help 2 "user/org-name repo-name" "$@"
-	json=$(gogs-curl GET /repos/$1/$2/collaborators)
-	if [ $debug -eq 1 ]; then
-		echo "$json"
+
+	check-user-org-exists-not $1; return-exit-code-if-error
+	check-repo-exists-not $1 $2; return-exit-code-if-error
+
+	response=`gogs-curl GET /repos/$1/$2/collaborators`
+
+	if is-dev; then
+		echo "$response"
 	else
-		echo "$json" | split-json "}," "{" | per-line "json-property username"
+		echo "$response" | split-json "}," "{" | per-line "json-property username"
 	fi
 }
 
