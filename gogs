@@ -788,6 +788,17 @@ function create-user {
 	echo-and-exit-code--error-if-message "$output"
 }
 
+actions=$actions" (admin) delete-user"
+function delete-user {
+	syntax-help 1 "user-name" "$@"
+
+	check-user-exists-not $1; return-if-error
+
+	output=`gogs-curl DELETE /admin/users/$1`
+
+	echo-and-exit-code--error-if-message "$output"
+}
+
 actions=$actions" create-api-token"
 function create-api-token {
 	syntax-help 2 "user-name token-name [password]" "$@"
