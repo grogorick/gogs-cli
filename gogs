@@ -280,6 +280,28 @@ alias return-exit-code-if-error='
 	fi
 	'
 
+# specialized helpers ----------
+
+function resolve-team-id-and-following-name {
+	if [ -z $3 ]; then
+		if is-not-number $1; then
+			echo "The provided \`team-id\` is not a number"
+			return 1
+		fi
+
+		id=$1
+		name=$2
+	else
+		check-org-exists-not $1; return-exit-code-if-error
+
+		response=`get-team $1 $2 id`
+
+		id=$response
+		name=$3
+	fi
+	return 0
+}
+
 # actions ----------
 
 actions=$actions" get-org"
@@ -516,24 +538,18 @@ function list-collaborators {
 
 actions=$actions" -"
 
-actions=$actions" add-team-member"
+actions=$actions" (admin) add-team-member"
 function add-team-member {
-	syntax-help 3 "org-name/repo-name team-name user-name" "$@"
+	syntax-help 2 "(org-name team-name | team-id) user-name" "$@"
 
-	get-user $3 > /dev/null 2>&1
+	resolve-team-id-and-following-name "$@"; return-exit-code-if-error
 
-	if [[ $? -ne 0 ]]; then
-		echo "ERROR: user not found, please create if first"
-		exit_code=1
-	fi
-	
-	id=`get-team $1 $2 id`
-	if [[ $? -ne 0 ]]; then
-		echo "ERROR: team not found, please create if first"
-		exit_code=1
-	fi
+	check-user-exists-not $name; return-exit-code-if-error
 
-	members_list=`list-team-members $id`
+	output=`gogs-curl PUT /admin/teams/$id/members/$name`
+
+	echo-and-exit-code--error-if-message "$output"
+}
 
 	if [[ " ${members_list[*]} " =~ " ${3} " ]]; then
 		message="user already exist"
