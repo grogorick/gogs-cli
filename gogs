@@ -744,8 +744,11 @@ function print-help {
 	for action in $actions; do
 		if [ "$action" = "-" ]; then
 			echo
+		elif [[ "$action" = "("* ]]; then
+			info="$action"
 		else
-			echo "  "$action
+			echo -e "  "$action "\033[0;90m$info\033[0m"
+			info=""
 		fi
 	done
 	configure do-not-ask-if-not-configured
