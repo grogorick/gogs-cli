@@ -766,6 +766,23 @@ function remove-team-repo {
 	echo-and-exit-code--error-if-message "$output"
 }
 
+actions=$actions" -"
+
+actions=$actions" get-token-user"
+function get-token-user {
+	syntax-help 0 "[property]" "$@"
+
+	response=`gogs-curl GET /user`
+
+	if [ -z $1 ] || is-dev; then
+		output="$response"
+	else
+		output=`echo "$response" | json-property "$1"`
+	fi
+
+	echo-and-exit-code--error-if-empty "$output"
+}
+
 actions=$actions" get-user"
 function get-user {
 	syntax-help 1 "user-name [property]" "$@"
