@@ -45,7 +45,7 @@ function configure {
 }
 
 function run_curl_and_log {
-	if [ $dev -eq 1 ]; then
+	if is-dev; then
 		echo "$@" > log_curl_cmd.txt
 		output=`"$@" 2> log_error.txt`
 		echo "$output" > log_curl_response.txt
@@ -57,17 +57,19 @@ function run_curl_and_log {
 
 function gogs-curl {
 	method=$1
+	auth="?token=$gogs_token"
 	cmd=$2
 	data="$3"
-	auth="?token=$gogs_token"
 	address=$gogs_server"/api/v1"$cmd$auth
 
-	if [ $debug -eq 1 ]; then
-		echo $method
-		echo -e "\tcommand: $cmd"
-		echo -e "\taddress: $address"
-		echo -e "\tdata:    $data"
-	else
+	if [ $debug -eq 1 ] || is-dev; then
+		echo \#
+		echo -e "# Method:  $method"
+		echo -e "# Command: $cmd"
+		echo -e "# Address: $address"
+		echo -e "# Data:    $data"
+	fi
+	if [ $debug -eq 0 ]; then
 		echo
 		sleep 1s
 		if [ -n "$data" ]; then
@@ -85,12 +87,15 @@ function gogs-curl-basic {
 	data="$4"
 	address=$gogs_server"/api/v1"$cmd
 
-	if [ $debug -eq 1 ]; then
-		echo $method
-		echo -e "\tauth: $auth"
-		echo -e "\taddress: $address"
-		echo -e "\tdata:    $data"
-	else
+	if [ $debug -eq 1 ] || is-dev; then
+		echo \#
+		echo -e "# Method:  $method"
+		echo -e "# Auth:    $auth"
+		echo -e "# Command: $cmd"
+		echo -e "# Address: $address"
+		echo -e "# Data:    $data"
+	fi
+	if [ $debug -eq 0 ]; then
 		echo
 		sleep 1s
 		if [ -n "$data" ]; then
@@ -757,33 +762,38 @@ function print-help {
 	echo
 	echo "  "Current configuration:
 	echo
-	echo -e "  "Server: $(if [ -z "$gogs_server" ]; then echo "\033[0;31m"NOT-CONFIGURED"\033[0m"; fi)$gogs_server
-	echo "  "\(Change via environment variable $gogs_server_envvar or $gogs_server_filename\)
+	echo -e "  "Server: `if [ -z "$gogs_server" ]; then echo "\033[0;31m"NOT-CONFIGURED"\033[0m"; fi`$gogs_server
+	if [ ! -z "$gogs_server" ]; then echo -en "\033[0;90m"; fi
+	echo -n "  "\(Change via environment variable $gogs_server_envvar or $gogs_server_filename\)
+	if [ ! -z "$gogs_server" ]; then echo -e "\033[0m"; fi
 	echo
-	echo -e "  "API token: $(if [ -z "$gogs_token" ]; then echo "\033[0;31m"NOT-CONFIGURED"\033[0m"; else echo ${gogs_token:0:5}...; fi)
-	echo "  "\(Change via environment variable $gogs_token_envvar or $gogs_token_filename[.gpg]\)
-	echo "  "\(Create one here: $(if [ -z "$gogs_server" ]; then echo https://YOUR.GOGS.SERVER; fi)$gogs_server/user/settings/applications\)
-	echo
+	echo -e "  "API token: `if [ -z "$gogs_token" ]; then echo "\033[0;31m"NOT-CONFIGURED"\033[0m"; else echo ${gogs_token:0:5}...; fi`
+	if [ ! -z "$gogs_token" ]; then echo -en "\033[0;90m"; fi
+	echo    "  "\(Change via environment variable $gogs_token_envvar or $gogs_token_filename[.gpg]\)
+	echo -n "  "\(Create one here: `if [ -z "$gogs_server" ]; then echo https://YOUR.GOGS.SERVER; fi`$gogs_server/user/settings/applications\)
+	if [ ! -z "$gogs_token" ]; then echo -e "\033[0m"; fi
 }
 
 debug=0
 dev=0
 while [ -n "$1" ] && [[ "$1" = "-"* ]] && [ "$1" != "--" ]; do
 	case "$1" in
-		-d) debug=1; echo \# DRY RUN \(doing nothing\) ;;
+		-d) dev=1; debug=1; echo \# DRY RUN \(doing nothing\) ;;
 		-D) dev=1; echo \# DEV RUN ;;
 	esac
 	shift
 done
 
 function run_action {
-	action=$1
-	if [ $dev -eq 1 ]; then
-		echo \# action: $action
-	fi
 	configure
-	if [ $dev -eq 1 ]; then
-		echo \# configured \| URL: $gogs_server \| Token: $gogs_token
+	if is-dev; then
+		echo -e "# Config:\tURL: $gogs_server"
+		echo -e "#\t\tToken: $gogs_token"
+		echo \#
+	fi
+	action=$1
+	if is-dev; then
+		echo \# Action: $action
 	fi
 	"$@"
 }
