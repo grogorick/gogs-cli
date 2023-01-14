@@ -621,32 +621,17 @@ function get-user {
 	echo-and-exit-code--error-if-empty "$output"
 }
 
-actions=$actions" create-user"
+actions=$actions" (admin) create-user"
 function create-user {
 	syntax-help 3 "user-name email password" "$@"
 
+	check-user-exists $1; return-if-error
+
 	get-user $1 > /dev/null 2>&1
 
-	if [[ $? -eq 0 ]]; then
-		message="user $1 already exist"
-		exit_code=0
-	elif [[ $? -eq 1 ]]; then
-		output=`gogs-curl POST /admin/users "{\"username\": \"$1\", \"email\": \"$2\", \"password\":\"$3\"}"`
-		error=`echo "$output" | json-property "message"`
-		if [[ -z $error ]]; then
-			message=$output
-			exit_code=0
-		else
-			message="ERROR: $error"
-			exit_code=1
-		fi
-	else
-		message="ERROR: Cannot retrieve org"
-		exit_code=2
-	fi
+	output=`gogs-curl POST /admin/users "{\"username\":\"$1\",\"email\":\"$2\",\"password\":\"$3\"}"`
 
-	echo $message
-	exit $exit_code
+	echo-and-exit-code--error-if-message "$output"
 }
 
 actions=$actions" create-user-token"
