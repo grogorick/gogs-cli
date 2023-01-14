@@ -452,22 +452,22 @@ function get-teams {
 
 actions=$actions" get-team"
 function get-team {
-	syntax-help 2 "org-name/repo-name team-name property" "$@"
-	json_teams=`get-teams $1`
-	if [ $debug -eq 1 ] || [ -z $3 ]; then
-		test=`echo -n $(echo "$json_teams" | split-json "}," "{" | grep "\"name\":\"$2\"")`
+	syntax-help 2 "org-name team-name [property]" "$@"
+
+	response=`get-teams $1`
+
+	response=`echo "$response" | split-json "}," "{" | grep "\"name\":\"$2\""`
+
+	if [ -z "$response" ]; then
+		echo Team \`$1:$2\` does NOT exist
+		return 1
+	elif [ -z $3 ] || is-dev; then
+		output="$response"
 	else
-		test=`echo -n $(echo "$json_teams" | split-json "}," "{" | grep "\"name\":\"$2\"" | json-property $3)`
+		output=`echo "$response" | json-property $3`
 	fi
 
-	if [[ -z $test ]]; then
-		exit_code=1
-	else
-		exit_code=0
-	fi
-
-	echo $test
-	return $exit_code
+	echo-and-exit-code--error-if-empty "$output"
 }
 
 actions=$actions" -"
