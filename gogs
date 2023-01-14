@@ -488,7 +488,14 @@ function add-collaborator {
 actions=$actions" remove-collaborator"
 function remove-collaborator {
 	syntax-help 3 "user/org-name repo-name user-name" "$@"
-	gogs-curl DELETE /repos/$1/$2/collaborators/$3
+
+	check-user-org-exists-not $1; return-exit-code-if-error
+	check-repo-exists-not $1 $2; return-exit-code-if-error
+	check-user-exists-not $3; return-if-error
+
+	output=`gogs-curl DELETE /repos/$1/$2/collaborators/$3`
+
+	echo-and-exit-code--error-if-message "$output"
 }
 
 actions=$actions" list-collaborators"
