@@ -78,7 +78,7 @@ function gogs-curl {
 	fi
 }
 
-function gogs-curl_basic {
+function gogs-curl-basic {
 	method=$1
 	auth=$2
 	cmd=$3
@@ -145,6 +145,18 @@ function per-line {
 	cat | while IFS='' read -r line; do
 		echo $line | $1
 	done
+}
+
+function is-number {
+	case $1 in
+		''|*[!0-9]*) return 1;;
+	esac;
+}
+function is-not-number {
+	case $1 in
+		''|*[!0-9]*) return 0;;
+	esac;
+	return 1
 }
 
 function is-dev {
@@ -300,6 +312,17 @@ function resolve-team-id-and-following-name {
 		name=$3
 	fi
 	return 0
+}
+
+function resolve-or-input-password {
+	if [ $debug -eq 1 ]; then
+		password=PASSWORD
+	elif [ -z "$1" ]; then
+		read -sp "Password: " password
+		echo
+	else
+		password="$1"
+	fi
 }
 
 # actions ----------
@@ -634,30 +657,24 @@ function create-user {
 	echo-and-exit-code--error-if-message "$output"
 }
 
-actions=$actions" create-user-token"
-function create-user-token {
-	syntax-help 3 "user-name password token-name" "$@"
+actions=$actions" create-api-token"
+function create-api-token {
+	syntax-help 2 "user-name token-name [password]" "$@"
 
-	get-user $1 > /dev/null 2>&1
+	check-user-exists-not $1; return-exit-code-if-error
 
-	if [[ $? -eq 0 ]]; then
-		output=`gogs-curl_basic POST "$1:$2" /users/$1/tokens "{\"name\":\"$3\"}"`
-		error=`echo "$output" | json-property "message"`
+	resolve-or-input-password "$3"
 
-		if [[ -z $error ]]; then
-			message=$output
-			exit_code=0
-		else
-			message="ERROR: $error"
-			exit_code=1
-		fi
+	response=`gogs-curl-basic POST "$1:$password" /users/$1/tokens "{\"name\":\"$2\"}"`
+
+	if [ -z "$response" ]; then
+		echo Token could NOT be created. Wrong password?
+		return 1
+	elif is-dev; then
+		echo "$response"
 	else
-		message="Error: Cannot retrieve user"
-		exit_code=2
+		echo "$response" | json-property sha1
 	fi
-
-	echo $message
-	exit $exit_code
 }
 
 actions=$actions" create-mirror"
