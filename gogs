@@ -164,6 +164,29 @@ function is-not-number {
 	return 1
 }
 
+function sub-cmd {
+	if is-dev; then
+		echo "#         \_ $1"
+	fi
+}
+function sub-cmd-no-debug {
+	sub-cmd "$@"
+	((dev--))
+}
+alias sub-cmd-error-check='
+	echo-if-error "$response"; return-exit-code-if-error
+	((dev++))
+	'
+alias sub-cmd-cleanup='
+	((dev++))
+	'
+
+alias skip-if-debug='
+	if [ $debug -eq 1 ]; then
+		((dev++))
+		return 0
+	fi
+	'
 function is-dev {
 	if [ $dev -gt 0 ]; then
 		return 0
@@ -174,87 +197,127 @@ function is-dev {
 # sanity checks ----------
 
 function check-org-exists {
+	sub-cmd "get-org (check-org-exists)"
+	skip-if-debug
 	get-org $1 > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
 		echo Organization \`$1\` already exists
+		sub-cmd-cleanup
 		return 1
 	fi
+	sub-cmd-cleanup
 	return 0
 }
 function check-org-exists-not {
+	sub-cmd "get-org (check-org-exists-not)"
+	skip-if-debug
 	response=`get-org $1`
 	if [ $? -ne 0 ]; then
 		echo "$response"
+		sub-cmd-cleanup
 		return 1
 	fi
+	sub-cmd-cleanup
 	return 0
 }
 
 function check-user-exists {
+	sub-cmd "get-user (check-user-exists)"
+	skip-if-debug
 	get-user $1 > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
 		echo User \`$1\` already exists
+		sub-cmd-cleanup
 		return 1
 	fi
+	sub-cmd-cleanup
 	return 0
 }
 function check-user-exists-not {
+	sub-cmd "get-user (check-user-exists-not)"
+	skip-if-debug
 	response=`get-user $1`
 	if [ $? -ne 0 ]; then
 		echo "$response"
+		sub-cmd-cleanup
 		return 1
 	fi
+	sub-cmd-cleanup
 	return 0
 }
 
 function check-user-org-exists {
+	sub-cmd "get-user (check-user-org-exists)"
+	skip-if-debug
 	get-user $1 > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
 		echo User/Organization \`$1\` already exists
+		sub-cmd-cleanup
 		return 1
 	fi
+	sub-cmd-cleanup
 	return 0
 }
 function check-user-org-exists-not {
+	sub-cmd "get-user (check-user-org-exists-not)"
+	skip-if-debug
 	get-user $1 > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
 		echo User/Organization \`$1\` does NOT exist
+		sub-cmd-cleanup
 		return 1
 	fi
+	sub-cmd-cleanup
 	return 0
 }
 
 function check-repo-exists {
+	sub-cmd "get-repo (check-repo-exists)"
+	skip-if-debug
 	get-repo $1 $2 > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
 		echo Repository \`$1/$2\` already exists
+		sub-cmd-cleanup
 		return 1
 	fi
+	sub-cmd-cleanup
 	return 0
 }
 function check-repo-exists-not {
+	sub-cmd "get-repo (check-repo-exists-not)"
+	skip-if-debug
 	response=`get-repo $1 $2`
 	if [ $? -ne 0 ]; then
 		echo "$response"
+		sub-cmd-cleanup
 		return 1
 	fi
+	sub-cmd-cleanup
 	return 0
 }
 
 function check-team-exists {
+	sub-cmd "get-team (check-team-exists)"
+	skip-if-debug
 	get-team $1 $2 > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
 		echo Team \`$1:$2\` already exists
+		sub-cmd-cleanup
 		return 1
 	fi
+	sub-cmd-cleanup
 	return 0
 }
 function check-team-exists-not {
+	sub-cmd "get-team (check-team-exists-not)"
+	skip-if-debug
 	response=`get-team $1 $2`
 	if [ $? -ne 0 ]; then
 		echo "$response"
+		sub-cmd-cleanup
 		return 1
 	fi
+	sub-cmd-cleanup
 	return 0
 }
 
@@ -285,6 +348,15 @@ function echo-and-exit-code--error-if-message {
 	check-message "$1"
 }
 
+function echo-output-if-error {
+	if [ $1 -ne 0 ]; then
+		echo "$2"
+	fi
+	return $1
+}
+
+alias echo-if-error='echo-output-if-error $?'
+
 alias return-if-error='
 	if [ $? -ne 0 ]; then
 		return 0
@@ -311,7 +383,9 @@ function resolve-team-id-and-following-name {
 	else
 		check-org-exists-not $1; return-exit-code-if-error
 
+		sub-cmd-no-debug "get-teams id (resolve-team-id-and-following-name)"
 		response=`get-team $1 $2 id`
+		sub-cmd-error-check
 
 		id=$response
 		name=$3
@@ -325,7 +399,9 @@ function resolve-user-org-id {
 	else
 		check-user-org-exists-not $1; return-exit-code-if-error
 
+		sub-cmd-no-debug "get-user id (resolve-user-org-id)"
 		response=`get-user $1 id`
+		sub-cmd-error-check
 
 		echo $response
 	fi
@@ -517,7 +593,9 @@ actions=$actions" get-team"
 function get-team {
 	syntax-help 2 "org-name team-name [property]" "$@"
 
+	sub-cmd-no-debug get-teams
 	response=`get-teams $1`
+	sub-cmd-error-check
 
 	response=`echo "$response" | split-json "}," "{" | grep "\"name\":\"$2\""`
 
