@@ -551,30 +551,15 @@ function add-team-member {
 	echo-and-exit-code--error-if-message "$output"
 }
 
-	if [[ " ${members_list[*]} " =~ " ${3} " ]]; then
-		message="user already exist"
-		exit_code=0
-	else
-		output=`gogs-curl PUT /admin/teams/$id/members/$3`
-		
-		error=`echo "$output"`
-		if [[ -z $error ]]; then
-			message="user $3 added to the team id $id"
-			exit_code=0
-		else
-			message="ERROR: $error"
-			exit_code=1
-		fi
-	fi
-
-	echo $message
-	exit $exit_code
-}
-
-actions=$actions" remove-team-member"
+actions=$actions" (admin) remove-team-member"
 function remove-team-member {
-	syntax-help 2 "team-id user-name" "$@"
-	gogs-curl DELETE /admin/teams/$1/members/$2
+	syntax-help 2 "(org-name team-name | team-id) user-name" "$@"
+
+	resolve-team-id-and-following-name "$@"; return-exit-code-if-error
+
+	output=`gogs-curl DELETE /admin/teams/$id/members/$name`
+
+	echo-and-exit-code--error-if-message "$output"
 }
 
 actions=$actions" list-team-members"
