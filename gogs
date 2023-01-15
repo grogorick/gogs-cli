@@ -107,10 +107,14 @@ function gogs-curl-basic {
 }
 
 function syntax-help {
-	if [ $1 -gt $(( $# - 2 )) ] || [ "$3" = "--help" ]; then
+	if [ $1 -gt $(( $# - 2 )) ]; then missing_args=true; else missing_args=false; fi
+	if $missing_args || [ "$3" = "--help" ]; then
 		if [ -z "$2" ]; then
 			echo Syntax: \(no arguments\)
 		else
+			if $missing_args; then
+				echo-error Missing argument\(s\)
+			fi
 			echo Syntax: $2
 		fi
 		exit 1
@@ -877,7 +881,8 @@ function print-help {
 		elif [[ "$action" = "("* ]]; then
 			info="$action"
 		else
-			echo -e "  "$action "\033[0;90m$info\033[0m"
+			echo -en "  "$action
+			echo-hint " "$info
 			info=""
 		fi
 	done
@@ -950,7 +955,10 @@ if [ $# -gt 0 ]; then
 			shift
 			run_action $action "$@"
 			;;
-		*) echo Unrecognized action: \`$action\` ;;
+		*)
+			echo-error Unrecognized action: \`$action\`
+			exit 1
+			;;
 	esac
 else
 	print-help
