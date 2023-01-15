@@ -180,24 +180,24 @@ function sub-cmd {
 }
 function sub-cmd-no-debug {
 	sub-cmd "$@"
-	((dev--))
+	((dev++))
 }
 alias sub-cmd-error-check='
 	echo-if-error "$response"; return-exit-code-if-error
-	((dev++))
+	((dev--))
 	'
 alias sub-cmd-cleanup='
-	((dev++))
+	((dev--))
 	'
 
-alias skip-if-debug='
+alias sub-cmd-skip-if-debug='
 	if [ $debug -eq 1 ]; then
-		((dev++))
+		((dev--))
 		return 0
 	fi
 	'
 function is-dev {
-	if [ $dev -gt 0 ]; then
+	if [ $dev -eq 1 ]; then
 		return 0
 	fi
 	return 1
@@ -207,7 +207,7 @@ function is-dev {
 
 function check-org-exists {
 	sub-cmd "get-org (check-org-exists)"
-	skip-if-debug
+	sub-cmd-skip-if-debug
 	get-org $1 > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
 		echo Organization \`$1\` already exists
@@ -219,7 +219,7 @@ function check-org-exists {
 }
 function check-org-exists-not {
 	sub-cmd "get-org (check-org-exists-not)"
-	skip-if-debug
+	sub-cmd-skip-if-debug
 	response=`get-org $1`
 	if [ $? -ne 0 ]; then
 		echo "$response"
@@ -232,7 +232,7 @@ function check-org-exists-not {
 
 function check-user-exists {
 	sub-cmd "get-user (check-user-exists)"
-	skip-if-debug
+	sub-cmd-skip-if-debug
 	get-user $1 > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
 		echo User \`$1\` already exists
@@ -244,7 +244,7 @@ function check-user-exists {
 }
 function check-user-exists-not {
 	sub-cmd "get-user (check-user-exists-not)"
-	skip-if-debug
+	sub-cmd-skip-if-debug
 	response=`get-user $1`
 	if [ $? -ne 0 ]; then
 		echo "$response"
@@ -257,7 +257,7 @@ function check-user-exists-not {
 
 function check-user-org-exists {
 	sub-cmd "get-user (check-user-org-exists)"
-	skip-if-debug
+	sub-cmd-skip-if-debug
 	get-user $1 > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
 		echo User/Organization \`$1\` already exists
@@ -269,7 +269,7 @@ function check-user-org-exists {
 }
 function check-user-org-exists-not {
 	sub-cmd "get-user (check-user-org-exists-not)"
-	skip-if-debug
+	sub-cmd-skip-if-debug
 	get-user $1 > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
 		echo User/Organization \`$1\` does NOT exist
@@ -282,7 +282,7 @@ function check-user-org-exists-not {
 
 function check-repo-exists {
 	sub-cmd "get-repo (check-repo-exists)"
-	skip-if-debug
+	sub-cmd-skip-if-debug
 	get-repo $1 $2 > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
 		echo Repository \`$1/$2\` already exists
@@ -294,7 +294,7 @@ function check-repo-exists {
 }
 function check-repo-exists-not {
 	sub-cmd "get-repo (check-repo-exists-not)"
-	skip-if-debug
+	sub-cmd-skip-if-debug
 	response=`get-repo $1 $2`
 	if [ $? -ne 0 ]; then
 		echo "$response"
@@ -307,7 +307,7 @@ function check-repo-exists-not {
 
 function check-team-exists {
 	sub-cmd "get-team (check-team-exists)"
-	skip-if-debug
+	sub-cmd-skip-if-debug
 	get-team $1 $2 > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
 		echo Team \`$1:$2\` already exists
@@ -319,7 +319,7 @@ function check-team-exists {
 }
 function check-team-exists-not {
 	sub-cmd "get-team (check-team-exists-not)"
-	skip-if-debug
+	sub-cmd-skip-if-debug
 	response=`get-team $1 $2`
 	if [ $? -ne 0 ]; then
 		echo "$response"
@@ -491,8 +491,6 @@ function create-user {
 	syntax-help 3 "user-name email password" "$@"
 
 	check-user-exists $1; return-if-error
-
-	get-user $1 > /dev/null 2>&1
 
 	output=`gogs-curl POST /admin/users "{\"username\":\"$1\",\"email\":\"$2\",\"password\":\"$3\"}"`
 
