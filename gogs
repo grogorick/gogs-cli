@@ -180,14 +180,20 @@ function sub-cmd {
 }
 function sub-cmd-no-debug {
 	sub-cmd "$@"
-	((dev++))
+	if [ $dev -gt 0 ]; then
+		((dev++))
+	fi
 }
 alias sub-cmd-error-check='
 	echo-if-error "$response"; return-exit-code-if-error
-	((dev--))
+	if [ $dev -gt 0 ]; then
+		((dev--))
+	fi
 	'
 alias sub-cmd-cleanup='
-	((dev--))
+	if [ $dev -gt 0 ]; then
+		((dev--))
+	fi
 	'
 
 alias sub-cmd-skip-if-debug='
@@ -205,130 +211,44 @@ function is-dev {
 
 # sanity checks ----------
 
-function check-org-exists {
-	sub-cmd "get-org (check-org-exists)"
+function check-entity {
+	local not=$1
+	local entity=$2
+	local check=$3
+	local desc=$4
+	shift; shift; shift; shift
+	sub-cmd-no-debug "get-$entity (check-$check-exists`if $not; then echo -not; fi`)"
 	sub-cmd-skip-if-debug
-	get-org $1 > /dev/null 2>&1
-	if [ $? -eq 0 ]; then
-		echo Organization \`$1\` already exists
-		sub-cmd-cleanup
+	`echo get-$entity` "$@" > /dev/null 2>&1
+	error_code=$?
+	sub-cmd-cleanup
+	if ! $not && [ $error_code -eq 0 ]; then
+		echo $desc already exists
+		return 1
+	elif $not && [ $error_code -ne 0 ]; then
+		echo $desc does NOT exist
 		return 1
 	fi
-	sub-cmd-cleanup
-	return 0
-}
-function check-org-exists-not {
-	sub-cmd "get-org (check-org-exists-not)"
-	sub-cmd-skip-if-debug
-	response=`get-org $1`
-	if [ $? -ne 0 ]; then
-		echo "$response"
-		sub-cmd-cleanup
-		return 1
-	fi
-	sub-cmd-cleanup
 	return 0
 }
 
-function check-user-exists {
-	sub-cmd "get-user (check-user-exists)"
-	sub-cmd-skip-if-debug
-	get-user $1 > /dev/null 2>&1
-	if [ $? -eq 0 ]; then
-		echo User \`$1\` already exists
-		sub-cmd-cleanup
-		return 1
-	fi
-	sub-cmd-cleanup
-	return 0
-}
-function check-user-exists-not {
-	sub-cmd "get-user (check-user-exists-not)"
-	sub-cmd-skip-if-debug
-	response=`get-user $1`
-	if [ $? -ne 0 ]; then
-		echo "$response"
-		sub-cmd-cleanup
-		return 1
-	fi
-	sub-cmd-cleanup
-	return 0
-}
+function check-entity-exists { check-entity false "$@"; }
+function check-entity-exists-not { check-entity true "$@"; }
 
-function check-user-org-exists {
-	sub-cmd "get-user (check-user-org-exists)"
-	sub-cmd-skip-if-debug
-	get-user $1 > /dev/null 2>&1
-	if [ $? -eq 0 ]; then
-		echo User/Organization \`$1\` already exists
-		sub-cmd-cleanup
-		return 1
-	fi
-	sub-cmd-cleanup
-	return 0
-}
-function check-user-org-exists-not {
-	sub-cmd "get-user (check-user-org-exists-not)"
-	sub-cmd-skip-if-debug
-	get-user $1 > /dev/null 2>&1
-	if [ $? -ne 0 ]; then
-		echo User/Organization \`$1\` does NOT exist
-		sub-cmd-cleanup
-		return 1
-	fi
-	sub-cmd-cleanup
-	return 0
-}
+function check-org-exists { check-entity-exists org org "Organization \`$1\`" $1; }
+function check-org-exists-not { check-entity-exists-not org org "Organization \`$1\`" $1; }
 
-function check-repo-exists {
-	sub-cmd "get-repo (check-repo-exists)"
-	sub-cmd-skip-if-debug
-	get-repo $1 $2 > /dev/null 2>&1
-	if [ $? -eq 0 ]; then
-		echo Repository \`$1/$2\` already exists
-		sub-cmd-cleanup
-		return 1
-	fi
-	sub-cmd-cleanup
-	return 0
-}
-function check-repo-exists-not {
-	sub-cmd "get-repo (check-repo-exists-not)"
-	sub-cmd-skip-if-debug
-	response=`get-repo $1 $2`
-	if [ $? -ne 0 ]; then
-		echo "$response"
-		sub-cmd-cleanup
-		return 1
-	fi
-	sub-cmd-cleanup
-	return 0
-}
+function check-user-exists { check-entity-exists user user "User \`$1\`" $1; }
+function check-user-exists-not { check-entity-exists-not user user "User \`$1\`" $1; }
 
-function check-team-exists {
-	sub-cmd "get-team (check-team-exists)"
-	sub-cmd-skip-if-debug
-	get-team $1 $2 > /dev/null 2>&1
-	if [ $? -eq 0 ]; then
-		echo Team \`$1:$2\` already exists
-		sub-cmd-cleanup
-		return 1
-	fi
-	sub-cmd-cleanup
-	return 0
-}
-function check-team-exists-not {
-	sub-cmd "get-team (check-team-exists-not)"
-	sub-cmd-skip-if-debug
-	response=`get-team $1 $2`
-	if [ $? -ne 0 ]; then
-		echo "$response"
-		sub-cmd-cleanup
-		return 1
-	fi
-	sub-cmd-cleanup
-	return 0
-}
+function check-user-org-exists { check-entity-exists user user-org "User/Organization \`$1\`" $1; }
+function check-user-org-exists-not { check-entity-exists-not user user-org "User/Organization \`$1\`" $1; }
+
+function check-repo-exists { check-entity-exists repo repo "Repository \`$1/$2\`" $1 $2; }
+function check-repo-exists-not { check-entity-exists-not repo repo "Repository \`$1/$2\`" $1 $2; }
+
+function check-team-exists { check-entity-exists team team "Team \`$1:$2\`" $1 $2; }
+function check-team-exists-not { check-entity-exists-not team team "Team \`$1:$2\`" $1 $2; }
 
 function check-empty {
 	if [ -z "$1" ]; then
