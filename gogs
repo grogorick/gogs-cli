@@ -117,6 +117,29 @@ function syntax-help {
 	fi
 }
 
+function echo-error {
+	echo-colored 31 "$@"
+}
+function echo-warning {
+	echo-colored 33 "$@"
+}
+function echo-success {
+	echo-colored 32 "$@"
+}
+function echo-hint {
+	echo-colored 90 "$@"
+}
+function echo-colored {
+	local color=$1
+	shift
+	echo_cmd="echo -e"
+	while [ -n "$1" ] && [[ "$1" = "-"* ]]; do
+		echo_cmd="$echo_cmd $1"
+		shift
+	done
+	`echo $echo_cmd` "\033[0;${color}m$@\033[0m"
+}
+
 function split-json {
 	if [ $# -gt 2 ]; then
 		echo "$3"
