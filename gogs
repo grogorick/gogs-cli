@@ -430,14 +430,83 @@ function resolve-or-input-password {
 
 # actions ----------
 
-actions=$actions" get-org"
-function get-org {
-	syntax-help 1 "org-name [property]" "$@"
+actions=$actions" create-api-token"
+function create-api-token {
+	syntax-help 2 "user-name token-name [password]" "$@"
 
-	response=`gogs-curl GET /orgs/$1`
+	check-user-exists-not $1; return-exit-code-if-error
+
+	resolve-or-input-password "$3"
+
+	response=`gogs-curl-basic POST "$1:$password" /users/$1/tokens "{\"name\":\"$2\"}"`
 
 	if [ -z "$response" ]; then
-		echo Organization \`$1\` does NOT exist
+		echo Token could NOT be created. Wrong password?
+		return 1
+	elif is-dev; then
+		echo "$response"
+	else
+		echo "$response" | json-property sha1
+	fi
+}
+
+actions=$actions" list-api-tokens"
+function list-api-tokens {
+	syntax-help 1 "user-name [password]" "$@"
+
+	check-user-exists-not $1; return-exit-code-if-error
+
+	resolve-or-input-password "$2"
+
+	response=`gogs-curl-basic GET "$1:$password" /users/$1/tokens`
+
+	check-message "$response"; return-exit-code-if-error
+
+	if is-dev; then
+		echo "$response"
+	else
+		echo "$response" | split-json "}," "{" | per-line "json-properties sha1 name"
+	fi
+}
+
+actions=$actions" get-api-token-user"
+function get-api-token-user {
+	syntax-help 0 "[property]" "$@"
+
+	response=`gogs-curl GET /user`
+
+	if [ -z $1 ] || is-dev; then
+		output="$response"
+	else
+		output=`echo "$response" | json-property "$1"`
+	fi
+
+	echo-and-exit-code--error-if-empty "$output"
+}
+
+actions=$actions" -"
+
+actions=$actions" (admin) create-user"
+function create-user {
+	syntax-help 3 "user-name email password" "$@"
+
+	check-user-exists $1; return-if-error
+
+	get-user $1 > /dev/null 2>&1
+
+	output=`gogs-curl POST /admin/users "{\"username\":\"$1\",\"email\":\"$2\",\"password\":\"$3\"}"`
+
+	echo-and-exit-code--error-if-message "$output"
+}
+
+actions=$actions" get-user"
+function get-user {
+	syntax-help 1 "user-name [property]" "$@"
+
+	response=`gogs-curl GET /users/$1`
+
+	if [ -z "$response" ]; then
+		echo User \`$1\` does NOT exist
 		return 1
 	elif [ -z $2 ] || is-dev; then
 		output="$response"
@@ -447,6 +516,19 @@ function get-org {
 
 	echo-and-exit-code--error-if-empty "$output"
 }
+
+actions=$actions" (admin) delete-user"
+function delete-user {
+	syntax-help 1 "user-name" "$@"
+
+	check-user-exists-not $1; return-if-error
+
+	output=`gogs-curl DELETE /admin/users/$1`
+
+	echo-and-exit-code--error-if-message "$output"
+}
+
+actions=$actions" -"
 
 actions=$actions" create-own-org"
 function create-own-org {
@@ -471,17 +553,25 @@ function create-org {
 	echo-and-exit-code--error-if-message "$output"
 }
 
-actions=$actions" create-org-repo"
-function create-org-repo {
-	syntax-help 4 "org-name repo-name description private:true/false" "$@"
+actions=$actions" get-org"
+function get-org {
+	syntax-help 1 "org-name [property]" "$@"
 
-	check-org-exists-not $1; return-exit-code-if-error
-	check-repo-exists $1 $2; return-if-error
+	response=`gogs-curl GET /orgs/$1`
 
-	output=`gogs-curl POST /org/$1/repos "{\"name\":\"$2\",\"description\":\"$3\",\"private\":$4}"`
+	if [ -z "$response" ]; then
+		echo Organization \`$1\` does NOT exist
+		return 1
+	elif [ -z $2 ] || is-dev; then
+		output="$response"
+	else
+		output=`echo "$response" | json-property "$2"`
+	fi
 
-	echo-and-exit-code--error-if-message "$output"
+	echo-and-exit-code--error-if-empty "$output"
 }
+
+actions=$actions" -"
 
 actions=$actions" create-own-repo"
 function create-own-repo {
@@ -490,6 +580,18 @@ function create-own-repo {
 	check-repo-exists $1 $2; return-if-error
 
 	output=`gogs-curl POST /user/repos "{\"name\":\"$1\",\"description\":\"$2\",\"private\":$3}"`
+
+	echo-and-exit-code--error-if-message "$output"
+}
+
+actions=$actions" create-org-repo"
+function create-org-repo {
+	syntax-help 4 "org-name repo-name description private:true/false" "$@"
+
+	check-org-exists-not $1; return-exit-code-if-error
+	check-repo-exists $1 $2; return-if-error
+
+	output=`gogs-curl POST /org/$1/repos "{\"name\":\"$2\",\"description\":\"$3\",\"private\":$4}"`
 
 	echo-and-exit-code--error-if-message "$output"
 }
@@ -506,16 +608,33 @@ function create-repo {
 	echo-and-exit-code--error-if-message "$output"
 }
 
-actions=$actions" delete-repo"
-function delete-repo {
-	syntax-help 2 "user/org-name repo-name" "$@"
+actions=$actions" create-mirror-repo"
+function create-mirror {
+	syntax-help 6 "clone-url repo-name (owner-user/org-name | -id) private:true/false mirror:true/false description [user-name password]" "$@"
 
-	check-user-org-exists-not $1; return-exit-code-if-error
-	check-repo-exists-not $1 $2; return-if-error
+	owner=`resolve-user-org-id $3`
 
-	output=`gogs-curl DELETE /repos/$1/$2`
+	request="\"clone_addr\":\"$1\",\"repo_name\":\"$2\",\"uid\":$owner,\"private\":$4,\"mirror\":$5,\"description\":\"$6\""
+	if [ ! -z "$7" ]; then
+		request="$request,\"auth_username\":\"$7\",\"auth_password\":\"$8\""
+	fi
+
+	output=`gogs-curl POST /repos/migrate {"$request"}`
 
 	echo-and-exit-code--error-if-message "$output"
+}
+
+actions=$actions" list-own-repos"
+function list-own-repos {
+	syntax-help 0 "" "$@"
+
+	response=`gogs-curl GET /user/repos`
+
+	if is-dev; then
+		echo "$response"
+	else
+		echo "$response" | split-json "}}," "{" | per-line "json-property name"
+	fi
 }
 
 actions=$actions" list-org-repos"
@@ -548,21 +667,6 @@ function list-user-repos {
 	fi
 }
 
-actions=$actions" -"
-
-actions=$actions" list-own-repos"
-function list-own-repos {
-	syntax-help 0 "" "$@"
-
-	response=`gogs-curl GET /user/repos`
-
-	if is-dev; then
-		echo "$response"
-	else
-		echo "$response" | split-json "}}," "{" | per-line "json-property name"
-	fi
-}
-
 actions=$actions" get-repo"
 function get-repo {
 	syntax-help 2 "user/org-name repo-name [property]" "$@"
@@ -583,14 +687,58 @@ function get-repo {
 	echo-and-exit-code--error-if-empty "$output"
 }
 
-actions=$actions" enable-issues"
-function enable-issues {
-	syntax-help 3 "user/org-name repo-name enable:true/false" "$@"
+actions=$actions" delete-repo"
+function delete-repo {
+	syntax-help 2 "user/org-name repo-name" "$@"
+
+	check-user-org-exists-not $1; return-exit-code-if-error
+	check-repo-exists-not $1 $2; return-if-error
+
+	output=`gogs-curl DELETE /repos/$1/$2`
+
+	echo-and-exit-code--error-if-message "$output"
+}
+
+actions=$actions" -"
+
+actions=$actions" add-collaborator"
+function add-collaborator {
+	syntax-help 3 "user/org-name repo-name user-name [permission:read/write/admin]" "$@"
+
+	check-user-org-exists-not $1; return-exit-code-if-error
+	check-repo-exists-not $1 $2; return-exit-code-if-error
+	check-user-exists-not $3; return-exit-code-if-error
+
+	output=`gogs-curl PUT /repos/$1/$2/collaborators/$3 "{\"permission\":\"$4\"}"`
+
+	echo-and-exit-code--error-if-message "$output"
+}
+
+actions=$actions" list-collaborators"
+function list-collaborators {
+	syntax-help 2 "user/org-name repo-name" "$@"
 
 	check-user-org-exists-not $1; return-exit-code-if-error
 	check-repo-exists-not $1 $2; return-exit-code-if-error
 
-	output=`gogs-curl PATCH /repos/$1/$2/issue-tracker "{\"enable_issues\":$3}"`
+	response=`gogs-curl GET /repos/$1/$2/collaborators`
+
+	if is-dev; then
+		echo "$response"
+	else
+		echo "$response" | split-json "}," "{" | per-line "json-property username"
+	fi
+}
+
+actions=$actions" remove-collaborator"
+function remove-collaborator {
+	syntax-help 3 "user/org-name repo-name user-name" "$@"
+
+	check-user-org-exists-not $1; return-exit-code-if-error
+	check-repo-exists-not $1 $2; return-exit-code-if-error
+	check-user-exists-not $3; return-if-error
+
+	output=`gogs-curl DELETE /repos/$1/$2/collaborators/$3`
 
 	echo-and-exit-code--error-if-message "$output"
 }
@@ -657,50 +805,6 @@ function get-team {
 
 actions=$actions" -"
 
-actions=$actions" add-collaborator"
-function add-collaborator {
-	syntax-help 3 "user/org-name repo-name user-name [permission:read/write/admin]" "$@"
-
-	check-user-org-exists-not $1; return-exit-code-if-error
-	check-repo-exists-not $1 $2; return-exit-code-if-error
-	check-user-exists-not $3; return-exit-code-if-error
-
-	output=`gogs-curl PUT /repos/$1/$2/collaborators/$3 "{\"permission\":\"$4\"}"`
-
-	echo-and-exit-code--error-if-message "$output"
-}
-
-actions=$actions" remove-collaborator"
-function remove-collaborator {
-	syntax-help 3 "user/org-name repo-name user-name" "$@"
-
-	check-user-org-exists-not $1; return-exit-code-if-error
-	check-repo-exists-not $1 $2; return-exit-code-if-error
-	check-user-exists-not $3; return-if-error
-
-	output=`gogs-curl DELETE /repos/$1/$2/collaborators/$3`
-
-	echo-and-exit-code--error-if-message "$output"
-}
-
-actions=$actions" list-collaborators"
-function list-collaborators {
-	syntax-help 2 "user/org-name repo-name" "$@"
-
-	check-user-org-exists-not $1; return-exit-code-if-error
-	check-repo-exists-not $1 $2; return-exit-code-if-error
-
-	response=`gogs-curl GET /repos/$1/$2/collaborators`
-
-	if is-dev; then
-		echo "$response"
-	else
-		echo "$response" | split-json "}," "{" | per-line "json-property username"
-	fi
-}
-
-actions=$actions" -"
-
 actions=$actions" (admin) add-team-member"
 function add-team-member {
 	syntax-help 2 "(org-name team-name | team-id) user-name" "$@"
@@ -710,17 +814,6 @@ function add-team-member {
 	check-user-exists-not $name; return-exit-code-if-error
 
 	output=`gogs-curl PUT /admin/teams/$id/members/$name`
-
-	echo-and-exit-code--error-if-message "$output"
-}
-
-actions=$actions" (admin) remove-team-member"
-function remove-team-member {
-	syntax-help 2 "(org-name team-name | team-id) user-name" "$@"
-
-	resolve-team-id-and-following-name "$@"; return-exit-code-if-error
-
-	output=`gogs-curl DELETE /admin/teams/$id/members/$name`
 
 	echo-and-exit-code--error-if-message "$output"
 }
@@ -740,6 +833,17 @@ function list-team-members {
 	else
 		echo "$response" | per-line "json-property username"
 	fi
+}
+
+actions=$actions" (admin) remove-team-member"
+function remove-team-member {
+	syntax-help 2 "(org-name team-name | team-id) user-name" "$@"
+
+	resolve-team-id-and-following-name "$@"; return-exit-code-if-error
+
+	output=`gogs-curl DELETE /admin/teams/$id/members/$name`
+
+	echo-and-exit-code--error-if-message "$output"
 }
 
 actions=$actions" -"
@@ -762,120 +866,6 @@ function remove-team-repo {
 	resolve-team-id-and-following-name "$@"; return-exit-code-if-error
 
 	output=`gogs-curl DELETE /admin/teams/$id/repos/$name`
-
-	echo-and-exit-code--error-if-message "$output"
-}
-
-actions=$actions" -"
-
-actions=$actions" get-token-user"
-function get-token-user {
-	syntax-help 0 "[property]" "$@"
-
-	response=`gogs-curl GET /user`
-
-	if [ -z $1 ] || is-dev; then
-		output="$response"
-	else
-		output=`echo "$response" | json-property "$1"`
-	fi
-
-	echo-and-exit-code--error-if-empty "$output"
-}
-
-actions=$actions" get-user"
-function get-user {
-	syntax-help 1 "user-name [property]" "$@"
-
-	response=`gogs-curl GET /users/$1`
-
-	if [ -z "$response" ]; then
-		echo User \`$1\` does NOT exist
-		return 1
-	elif [ -z $2 ] || is-dev; then
-		output="$response"
-	else
-		output=`echo "$response" | json-property "$2"`
-	fi
-
-	echo-and-exit-code--error-if-empty "$output"
-}
-
-actions=$actions" (admin) create-user"
-function create-user {
-	syntax-help 3 "user-name email password" "$@"
-
-	check-user-exists $1; return-if-error
-
-	get-user $1 > /dev/null 2>&1
-
-	output=`gogs-curl POST /admin/users "{\"username\":\"$1\",\"email\":\"$2\",\"password\":\"$3\"}"`
-
-	echo-and-exit-code--error-if-message "$output"
-}
-
-actions=$actions" (admin) delete-user"
-function delete-user {
-	syntax-help 1 "user-name" "$@"
-
-	check-user-exists-not $1; return-if-error
-
-	output=`gogs-curl DELETE /admin/users/$1`
-
-	echo-and-exit-code--error-if-message "$output"
-}
-
-actions=$actions" create-api-token"
-function create-api-token {
-	syntax-help 2 "user-name token-name [password]" "$@"
-
-	check-user-exists-not $1; return-exit-code-if-error
-
-	resolve-or-input-password "$3"
-
-	response=`gogs-curl-basic POST "$1:$password" /users/$1/tokens "{\"name\":\"$2\"}"`
-
-	if [ -z "$response" ]; then
-		echo Token could NOT be created. Wrong password?
-		return 1
-	elif is-dev; then
-		echo "$response"
-	else
-		echo "$response" | json-property sha1
-	fi
-}
-
-actions=$actions" list-api-tokens"
-function list-api-tokens {
-	syntax-help 1 "user-name [password]" "$@"
-
-	check-user-exists-not $1; return-exit-code-if-error
-
-	resolve-or-input-password "$2"
-
-	response=`gogs-curl-basic GET "$1:$password" /users/$1/tokens`
-
-	check-message "$response"; return-exit-code-if-error
-
-	if is-dev; then
-		echo "$response"
-	else
-		echo "$response" | split-json "}," "{" | per-line "json-properties sha1 name"
-	fi
-}
-
-actions=$actions" create-mirror"
-function create-mirror {
-	syntax-help 6 "clone-url repo-name (owner-user/org-name | -id) private:true/false mirror:true/false description [user-name password]" "$@"
-
-	owner=`resolve-user-org-id $3`
-
-	request="\"clone_addr\":\"$1\",\"repo_name\":\"$2\",\"uid\":$owner,\"private\":$4,\"mirror\":$5,\"description\":\"$6\""
-	if [ ! -z "$7" ]; then
-		request="$request,\"auth_username\":\"$7\",\"auth_password\":\"$8\""
-	fi
-
-	output=`gogs-curl POST /repos/migrate {"$request"}`
 
 	echo-and-exit-code--error-if-message "$output"
 }
@@ -906,6 +896,17 @@ function get-raw {
 	echo-and-exit-code--error-if-empty "$output"
 }
 
+actions=$actions" enable-issues"
+function enable-issues {
+	syntax-help 3 "user/org-name repo-name enable:true/false" "$@"
+
+	check-user-org-exists-not $1; return-exit-code-if-error
+	check-repo-exists-not $1 $2; return-exit-code-if-error
+
+	output=`gogs-curl PATCH /repos/$1/$2/issue-tracker "{\"enable_issues\":$3}"`
+
+	echo-and-exit-code--error-if-message "$output"
+}
 
 # cmd interface ----------
 
@@ -944,7 +945,7 @@ function print-help {
 		echo
 		echo "  "Authenticated as:
 		echo -n "  ... "
-		response=`get-token-user`
+		response=`get-api-token-user`
 		r_login=`echo "$response" | json-property username`
 		r_name=`echo "$response" | json-property full_name`
 		r_email=`echo "$response" | json-property email`
