@@ -381,14 +381,12 @@ alias return-exit-code-if-error='
 # specialized helpers ----------
 
 function resolve-team-id-and-following-name {
-	if [ -z $3 ]; then
-		if is-not-number $1; then
-			echo "The provided \`team-id\` is not a number"
-			return 1
-		fi
-
+	if is-number $1; then
 		id=$1
 		name=$2
+	elif [ -z $3 ]; then
+		echo "The provided \`team-id\` is not a number"
+		return 1
 	else
 		check-org-exists-not $1; return-exit-code-if-error
 
@@ -831,14 +829,21 @@ function list-team-members {
 
 	resolve-team-id-and-following-name "$@" _; return-exit-code-if-error
 
+	get-team-members $1 $2 username
+}
+
+actions=$actions" (admin) get-team-members"
+function get-team-members {
+	syntax-help 1 "(org-name team-name | team-id) [property]" "$@"
+
+	resolve-team-id-and-following-name "$@" _; return-exit-code-if-error
+
 	response=`gogs-curl GET /admin/teams/$id/members`
 
-	response=`echo "$response" | split-json "}," "{"`
-
-	if is-dev; then
+	if [ "$name" = "_" ] || is-dev; then
 		echo "$response"
 	else
-		echo "$response" | per-line "json-property username"
+		echo "$response" | split-json "}," "{" | per-line "json-property $name"
 	fi
 }
 
