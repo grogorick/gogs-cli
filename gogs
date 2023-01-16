@@ -247,10 +247,10 @@ function check-entity {
 	error_code=$?
 	sub-cmd-cleanup
 	if ! $not && [ $error_code -eq 0 ]; then
-		echo $desc already exists
+		echo-error $desc already exists
 		return 1
 	elif $not && [ $error_code -ne 0 ]; then
-		echo $desc does NOT exist
+		echo-error $desc does NOT exist
 		return 1
 	fi
 	return 0
@@ -383,7 +383,7 @@ function create-api-token {
 	response=`gogs-curl-basic POST "$1:$password" /users/$1/tokens "{\"name\":\"$2\"}"`
 
 	if [ -z "$response" ]; then
-		echo Token could NOT be created. Wrong password?
+		echo-error Token could NOT be created. Wrong password?
 		return 1
 	elif is-dev; then
 		echo "$response"
@@ -500,7 +500,7 @@ function get-org {
 	response=`gogs-curl GET /orgs/$1`
 
 	if [ -z "$response" ]; then
-		echo Organization \`$1\` does NOT exist
+		echo-error Organization \`$1\` does NOT exist
 		return 1
 	elif [ -z $2 ] || is-dev; then
 		output="$response"
@@ -616,7 +616,7 @@ function get-repo {
 	response=`gogs-curl GET /repos/$1/$2`
 
 	if [ -z "$response" ]; then
-		echo Repository \`$1/$2\` does NOT exist
+		echo-error Repository \`$1/$2\` does NOT exist
 		return 1
 	elif [ -z $3 ] || is-dev; then
 		output="$response"
@@ -741,7 +741,7 @@ function get-team {
 	response=`echo "$response" | split-json "}," "{" | grep "\"name\":\"$2\""`
 
 	if [ -z "$response" ]; then
-		echo Team \`$1:$2\` does NOT exist
+		echo-error Team \`$1:$2\` does NOT exist
 		return 1
 	elif [ -z $3 ] || is-dev; then
 		output="$response"
