@@ -17,28 +17,25 @@ shopt -s expand_aliases
 
 function configure {
 	# server url
-	if [ -n "$(printenv $gogs_server_envvar)" ]; then
-		gogs_server=$(printenv $gogs_server_envvar)
-	elif [ -f "$gogs_server_filename" ]; then
+	gogs_server=$(printenv $gogs_server_envvar)
+	if [ -z "$gogs_server" ] && [ -f "$gogs_server_filename" ]; then
 		gogs_server=$(cat "$gogs_server_filename")
 	elif [ $# -eq 0 ]; then
-		echo No Gogs server URL \(e.g. https://try.gogs.io\) configured.
+		echo-warning No Gogs server URL \(e.g. https://try.gogs.io\) configured.
 		read -p "URL: " gogs_server
 		echo
 		if [ -z "$gogs_server" ]; then exit 0; fi
 	fi
 
 	# api token
-	if [ -n "$(printenv $gogs_token_envvar)" ]; then
-		gogs_token=$(printenv $gogs_token_envvar)
-	elif [ -f "$gogs_token_filename" ]; then
+	gogs_token=$(printenv $gogs_token_envvar)
+	if [ -z "$gogs_token" ] && [ -f "$gogs_token_filename" ]; then
 		gogs_token=$(cat "$gogs_token_filename")
 	elif [ -f "$gogs_token_filename.gpg" ]; then
 		gogs_token=$(gpg -q -d "$gogs_token_filename.gpg" 2>/dev/null)
 	elif [ $# -eq 0 ]; then
-		echo No Gogs API token configured.
+		echo-warning No Gogs API token configured.
 		read -sp "Token: " gogs_token
-		echo
 		echo
 		if [ -z "$gogs_token" ]; then exit 0; fi
 	fi
