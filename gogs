@@ -42,7 +42,7 @@ function configure {
 }
 
 function run_curl_and_log {
-	if is-dev; then
+	if is-debug; then
 		echo "$@" > log_curl_cmd.txt
 		output=`"$@" 2> log_error.txt`
 		echo "$output" > log_curl_response.txt
@@ -59,14 +59,14 @@ function gogs-curl {
 	data="$3"
 	address=$gogs_server"/api/v1"$cmd$auth
 
-	if [ $debug -eq 1 ] || is-dev; then
+	if is-debug; then
 		echo \#
 		echo -e "# Method:  $method"
 		echo -e "# Command: $cmd"
 		echo -e "# Address: $address"
 		echo -e "# Data:    $data"
 	fi
-	if [ $debug -eq 0 ]; then
+	if ! $dry_run; then
 		echo
 		sleep 1s
 		if [ -n "$data" ]; then
@@ -84,7 +84,7 @@ function gogs-curl-basic {
 	data="$4"
 	address=$gogs_server"/api/v1"$cmd
 
-	if [ $debug -eq 1 ] || is-dev; then
+	if is-debug; then
 		echo \#
 		echo -e "# Method:  $method"
 		echo -e "# Auth:    $auth"
@@ -92,7 +92,7 @@ function gogs-curl-basic {
 		echo -e "# Address: $address"
 		echo -e "# Data:    $data"
 	fi
-	if [ $debug -eq 0 ]; then
+	if ! $dry_run; then
 		echo
 		sleep 1s
 		if [ -n "$data" ]; then
@@ -217,36 +217,36 @@ function is-not-number {
 }
 
 function sub-cmd {
-	if is-dev; then
+	if is-debug; then
 		echo "#         \_ $1"
 	fi
 }
 function sub-cmd-no-debug {
 	sub-cmd "$@"
-	if [ $dev -gt 0 ]; then
-		((dev++))
+	if [ $debug -gt 0 ]; then
+		((debug++))
 	fi
 }
 alias sub-cmd-error-check='
 	echo-if-error "$response"; return-exit-code-if-error
-	if [ $dev -gt 0 ]; then
-		((dev--))
+	if [ $debug -gt 0 ]; then
+		((debug--))
 	fi
 	'
 alias sub-cmd-cleanup='
-	if [ $dev -gt 0 ]; then
-		((dev--))
+	if [ $debug -gt 0 ]; then
+		((debug--))
 	fi
 	'
 
 alias sub-cmd-skip-if-debug='
-	if [ $debug -eq 1 ]; then
-		((dev--))
+	if $dry_run; then
+		((debug--))
 		return 0
 	fi
 	'
-function is-dev {
-	if [ $dev -eq 1 ]; then
+function is-debug {
+	if [ $debug -eq 1 ]; then
 		return 0
 	fi
 	return 1
@@ -377,7 +377,7 @@ function resolve-user-org-id {
 }
 
 function resolve-or-input-password {
-	if [ $debug -eq 1 ]; then
+	if $dry_run; then
 		password=PASSWORD
 	elif [ -z "$1" ]; then
 		read -sp "Password: " password
@@ -402,7 +402,7 @@ function create-api-token {
 	if [ -z "$response" ]; then
 		echo-error Token could NOT be created. Wrong password?
 		return 1
-	elif is-dev; then
+	elif is-debug; then
 		echo "$response"
 	else
 		echo "$response" | json-property sha1
@@ -421,7 +421,7 @@ function list-api-tokens {
 
 	check-message "$response"; return-exit-code-if-error
 
-	if is-dev; then
+	if is-debug; then
 		echo "$response"
 	else
 		echo "$response" | split-json "}," "{" | per-line "json-properties sha1 name"
@@ -434,7 +434,7 @@ function get-api-token-user {
 
 	response=`gogs-curl GET /user`
 
-	if [ -z $1 ] || is-dev; then
+	if [ -z $1 ] || is-debug; then
 		output="$response"
 	else
 		output=`echo "$response" | json-property "$1"`
@@ -465,7 +465,7 @@ function get-user {
 	if [ -z "$response" ]; then
 		echo-error User \`$1\` does NOT exist
 		return 1
-	elif [ -z $2 ] || is-dev; then
+	elif [ -z $2 ] || is-debug; then
 		output="$response"
 	else
 		output=`echo "$response" | json-property "$2"`
@@ -519,7 +519,7 @@ function get-org {
 	if [ -z "$response" ]; then
 		echo-error Organization \`$1\` does NOT exist
 		return 1
-	elif [ -z $2 ] || is-dev; then
+	elif [ -z $2 ] || is-debug; then
 		output="$response"
 	else
 		output=`echo "$response" | json-property "$2"`
@@ -587,7 +587,7 @@ function list-own-repos {
 
 	response=`gogs-curl GET /user/repos`
 
-	if is-dev; then
+	if is-debug; then
 		echo "$response"
 	else
 		echo "$response" | split-json "}}," "{" | per-line "json-property name"
@@ -602,7 +602,7 @@ function list-org-repos {
 
 	response=`gogs-curl GET /orgs/$1/repos`
 
-	if is-dev; then
+	if is-debug; then
 		echo "$response"
 	else
 		echo "$response" | split-json "}}," "{" | per-line "json-property name"
@@ -617,7 +617,7 @@ function list-user-repos {
 
 	response=`gogs-curl GET /users/$1/repos`
 
-	if is-dev; then
+	if is-debug; then
 		echo "$response"
 	else
 		echo "$response" | split-json "}}," "{" | per-line "json-property name"
@@ -635,7 +635,7 @@ function get-repo {
 	if [ -z "$response" ]; then
 		echo-error Repository \`$1/$2\` does NOT exist
 		return 1
-	elif [ -z $3 ] || is-dev; then
+	elif [ -z $3 ] || is-debug; then
 		output="$response"
 	else
 		output=`echo "$response" | json-property "$3"`
@@ -687,7 +687,7 @@ function get-collaborators {
 
 	response=`gogs-curl GET /repos/$1/$2/collaborators`
 
-	if [ -z $3 ] || is-dev; then
+	if [ -z $3 ] || is-debug; then
 		output="$response"
 	else
 		output=`echo "$response" | split-json "}," "{" | per-line "json-property $3"`
@@ -738,7 +738,7 @@ function get-teams {
 
 	response=`gogs-curl GET /orgs/$1/teams`
 
-	if [ -z $2 ] || is-dev; then
+	if [ -z $2 ] || is-debug; then
 		output="$response"
 	else
 		output=`echo "$response" | split-json "}," "{" | per-line "json-property $2"`
@@ -760,7 +760,7 @@ function get-team {
 	if [ -z "$response" ]; then
 		echo-error Team \`$1:$2\` does NOT exist
 		return 1
-	elif [ -z $3 ] || is-dev; then
+	elif [ -z $3 ] || is-debug; then
 		output="$response"
 	else
 		output=`echo "$response" | json-property $3`
@@ -801,7 +801,7 @@ function get-team-members {
 
 	response=`gogs-curl GET /admin/teams/$id/members`
 
-	if [ "$name" = "_" ] || is-dev; then
+	if [ "$name" = "_" ] || is-debug; then
 		echo "$response"
 	else
 		echo "$response" | split-json "}," "{" | per-line "json-property $name"
@@ -851,7 +851,7 @@ function get-commit {
 
 	json=`gogs-curl GET /repos/$1/$2/commits/$3`
 
-	if [ -z $4 ] || is-dev; then
+	if [ -z $4 ] || is-debug; then
 		output="$json"
 	else
 		output=`echo "$json" | json-property "$4"`
@@ -928,12 +928,12 @@ function print-help {
 	fi
 }
 
+dry_run=false
 debug=0
-dev=0
 while [ -n "$1" ] && [[ "$1" = "-"* ]] && [ "$1" != "--" ]; do
 	case "$1" in
-		-d) dev=1; debug=1; echo \# DRY RUN \(doing nothing\) ;;
-		-D) dev=1; echo \# DEV RUN ;;
+		-d) dry_run=true; debug=1; echo \# DRY RUN \(doing nothing\) ;;
+		-D) debug=1; echo \# DEV RUN ;;
 	esac
 	shift
 done
@@ -941,7 +941,7 @@ done
 function run_action {
 	action=$1
 	configure
-	if is-dev; then
+	if is-debug; then
 		echo -e "# Config:\tURL: $gogs_server"
 		echo -e "#\t\tToken: $gogs_token"
 		echo \#
