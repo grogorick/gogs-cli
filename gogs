@@ -133,6 +133,25 @@ function echo-hint {
 function echo-colored {
 	local color=$1
 	shift
+
+	if [ "$1" = "-if" ]; then
+		condition=$2
+		shift; shift
+		if [ $condition -ne 0 ]; then
+			echo "$@"
+			return
+		fi
+	fi
+
+	if [ "$1" = "-if-error" ]; then
+		condition=$2
+		shift; shift
+		if [ $condition -eq 0 ]; then
+			echo "$@"
+			return
+		fi
+	fi
+
 	echo_cmd="echo -e"
 	while [ -n "$1" ] && [[ "$1" = "-"* ]]; do
 		echo_cmd="$echo_cmd $1"
@@ -235,6 +254,18 @@ function is-dev {
 
 # sanity checks ----------
 
+alias return-if-error='
+	if [ $? -ne 0 ]; then
+		return 0
+	fi
+	'
+alias return-exit-code-if-error='
+	local return_exit_code_if_error_code=$?
+	if [ $return_exit_code_if_error_code -ne 0 ]; then
+		return $return_exit_code_if_error_code
+	fi
+	'
+
 function check-entity {
 	local not=$1
 	local entity=$2
@@ -244,12 +275,12 @@ function check-entity {
 	sub-cmd-no-debug "get-$entity (check-$check-exists`if $not; then echo -not; fi`)"
 	sub-cmd-skip-if-debug
 	`echo get-$entity` "$@" > /dev/null 2>&1
-	error_code=$?
+	local check_entity_error_code=$?
 	sub-cmd-cleanup
-	if ! $not && [ $error_code -eq 0 ]; then
+	if ! $not && [ $check_entity_error_code -eq 0 ]; then
 		echo-error $desc already exists
 		return 1
-	elif $not && [ $error_code -ne 0 ]; then
+	elif $not && [ $check_entity_error_code -ne 0 ]; then
 		echo-error $desc does NOT exist
 		return 1
 	fi
@@ -274,53 +305,39 @@ function check-repo-exists-not { check-entity-exists-not repo repo "Repository \
 function check-team-exists { check-entity-exists team team "Team \`$1:$2\`" $1 $2; }
 function check-team-exists-not { check-entity-exists-not team team "Team \`$1:$2\`" $1 $2; }
 
-function check-empty {
-	if [ -z "$1" ]; then
-		return 1
-	fi
-	return 0
-}
 function echo-and-exit-code--error-if-empty {
-	if [ ! -z "$1" ]; then
+	if [ -n "$1" ]; then
 		echo "$1"
-	fi
-	check-empty "$1"
-}
-
-function check-message {
-	test=`echo "$1" | json-property message`
-	if [ -z "$test" ]; then
 		return 0
 	fi
 	return 1
 }
+
+function check-message {
+	local message=`echo "$1" | json-property message`
+	if [ -n "$message" ]; then
+		echo-error "$message"
+		return 1
+	fi
+	return 0
+}
 function echo-and-exit-code--error-if-message {
-	if [ ! -z "$1" ]; then
+	if [ -n "$1" ]; then
+		check-message "$1"
+		return-exit-code-if-error
 		echo "$1"
 	fi
-	check-message "$1"
+	return 0
 }
 
-function echo-output-if-error {
+function echo-if-not {
 	if [ $1 -ne 0 ]; then
-		echo "$2"
+		echo-error "$2"
 	fi
 	return $1
 }
 
-alias echo-if-error='echo-output-if-error $?'
-
-alias return-if-error='
-	if [ $? -ne 0 ]; then
-		return 0
-	fi
-	'
-alias return-exit-code-if-error='
-	check_error=$?
-	if [ $check_error -ne 0 ]; then
-		return $check_error
-	fi
-	'
+alias echo-if-error='echo-if-not $?'
 
 # specialized helpers ----------
 
@@ -329,7 +346,7 @@ function resolve-team-id-and-following-name {
 		id=$1
 		name=$2
 	elif [ -z $3 ]; then
-		echo "The provided \`team-id\` is not a number"
+		echo-error "The provided \`team-id\` is not a number"
 		return 1
 	else
 		check-org-exists-not $1; return-exit-code-if-error
@@ -446,7 +463,7 @@ function get-user {
 	response=`gogs-curl GET /users/$1`
 
 	if [ -z "$response" ]; then
-		echo User \`$1\` does NOT exist
+		echo-error User \`$1\` does NOT exist
 		return 1
 	elif [ -z $2 ] || is-dev; then
 		output="$response"
@@ -922,14 +939,12 @@ while [ -n "$1" ] && [[ "$1" = "-"* ]] && [ "$1" != "--" ]; do
 done
 
 function run_action {
+	action=$1
 	configure
 	if is-dev; then
 		echo -e "# Config:\tURL: $gogs_server"
 		echo -e "#\t\tToken: $gogs_token"
 		echo \#
-	fi
-	action=$1
-	if is-dev; then
 		echo \# Action: $action
 	fi
 	"$@"
