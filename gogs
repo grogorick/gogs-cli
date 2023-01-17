@@ -267,6 +267,9 @@ alias return-exit-code-if-error='
 	'
 
 function check-entity {
+	if $no_checks; then
+		return 0
+	fi
 	local not=$1
 	local entity=$2
 	local check=$3
@@ -930,13 +933,18 @@ function print-help {
 
 dry_run=false
 debug=0
+no_checks=false
 while [ -n "$1" ] && [[ "$1" = "-"* ]] && [ "$1" != "--" ]; do
 	case "$1" in
 		-d) dry_run=true; debug=1; echo \# DRY RUN \(doing nothing\) ;;
 		-D) debug=1; echo \# DEV RUN ;;
+		-n) no_checks=true ;;
 	esac
 	shift
 done
+if $no_checks && is-debug; then
+	 echo \# SKIP SANITY CHECKS
+fi
 
 function run_action {
 	action=$1
