@@ -889,9 +889,18 @@ function enable-issues {
 
 function print-help {
 	echo
-	echo \*\* Gogs command line interface \*\*
+	echo "  Syntax: gogs [OPTIONS] ACTION [ARGUMENTS ...]"
 	echo
 	echo "  "----------
+	echo "  "OPTIONS
+	echo
+	echo "  -h | --help            Print help of the action"
+	echo "  -d | --dry-run         See what commands will be executed, but \do nothing"
+	echo "  -D | --debug debug=1   Enable debug output"
+	echo "  -n | --no-checks       Disable sanity checks, e.g. \if an affected org/user/repo exists"
+	echo
+	echo "  "----------
+	echo "  "ACTIONS
 	echo
 	for action in $actions; do
 		if [ "$action" = "-" ]; then
@@ -907,20 +916,21 @@ function print-help {
 	configure do-not-ask-if-not-configured
 	echo
 	echo "  "----------
+	echo "  "CURRENT CONFIGURATION
 	echo
-	echo -e "  "Server: `if [ -z "$gogs_server" ]; then echo-warning NOT-CONFIGURED; fi`$gogs_server
+	echo -e "  Server: `if [ -z "$gogs_server" ]; then echo-warning NOT-CONFIGURED; fi`$gogs_server"
 	echo`if [ ! -z "$gogs_server" ]; then echo "-hint"; fi`\
-			"  "\(Change via environment variable $gogs_server_envvar or $gogs_server_filename\)
+			"  (Change via environment variable $gogs_server_envvar or $gogs_server_filename)"
 	echo
-	echo -e "  "API token: `if [ -z "$gogs_token" ]; then echo-warning NOT-CONFIGURED; else echo ${gogs_token:0:5}...; fi`
+	echo -e "  API token: `if [ -z "$gogs_token" ]; then echo-warning NOT-CONFIGURED; else echo ${gogs_token:0:5}...; fi`"
 	echo`if [ ! -z "$gogs_server" ]; then echo "-hint"; fi`\
-			"  "\(Change via environment variable $gogs_token_envvar or $gogs_token_filename[.gpg]\)\\n\
-			 " "\(Create one via \`create-api-token\` or\
-				  at `if [ -z "$gogs_server" ]; then echo https://YOUR.GOGS.SERVER; fi`$gogs_server/user/settings/applications\)
+			"  (Change via environment variable $gogs_token_envvar or $gogs_token_filename[.gpg])\n"\
+			 " (Create one via \`create-api-token\` or"\
+					"at `if [ -z "$gogs_server" ]; then echo https://YOUR.GOGS.SERVER; fi`$gogs_server/user/settings/applications)"
 
 	if [ ! -z "$gogs_server" ] && [ ! -z "$gogs_token" ]; then
 		echo
-		echo "  "Authenticated as:
+		echo "  Authenticated as:"
 		echo -n "  ... "
 		response=`get-api-token-user`
 		r_login=`echo "$response" | json-property username`
@@ -938,10 +948,10 @@ debug=0
 no_checks=false
 while [ -n "$1" ] && [[ "$1" = "-"* ]] && [ "$1" != "--" ]; do
 	case "$1" in
-		-h) help=true ;;
-		-d) dry_run=true; debug=1; echo \# DRY RUN \(doing nothing\) ;;
-		-D) debug=1; echo \# DEV RUN ;;
-		-n) no_checks=true ;;
+		-h | --help) help=true ;;
+		-d | --dry-run) dry_run=true; debug=1; echo \# DRY RUN \(doing nothing\) ;;
+		-D | --debug) debug=1; echo \# DEV RUN ;;
+		-n | --no-checks) no_checks=true ;;
 	esac
 	shift
 done
