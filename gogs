@@ -20,7 +20,8 @@ function configure {
 	gogs_server=$(printenv $gogs_server_envvar)
 	if [ -z "$gogs_server" ] && [ -f "$gogs_server_filename" ]; then
 		gogs_server=$(cat "$gogs_server_filename")
-	elif [ $# -eq 0 ]; then
+  fi
+	if [ -z "$gogs_server" ] && [ $# -eq 0 ]; then
 		echo-warning No Gogs server URL \(e.g. https://try.gogs.io\) configured.
 		read -p "URL: " gogs_server
 		echo
@@ -31,9 +32,11 @@ function configure {
 	gogs_token=$(printenv $gogs_token_envvar)
 	if [ -z "$gogs_token" ] && [ -f "$gogs_token_filename" ]; then
 		gogs_token=$(cat "$gogs_token_filename")
-	elif [ -f "$gogs_token_filename.gpg" ]; then
+	fi
+  if [ -z "$gogs_token" ] && [ -f "$gogs_token_filename.gpg" ]; then
 		gogs_token=$(gpg -q -d "$gogs_token_filename.gpg" 2>/dev/null)
-	elif [ $# -eq 0 ]; then
+	fi
+  if [ -z "$gogs_token" ] && [ $# -eq 0 ]; then
 		echo-warning No Gogs API token configured.
 		read -sp "Token: " gogs_token
 		echo
