@@ -60,7 +60,7 @@ function gogs-curl {
 	auth="?token=$gogs_token"
 	cmd=$2
 	data="$3"
-	address=$gogs_server"/api/v1"$cmd$auth
+	address=$gogs_server"/api/v1"$cmd
 
 	if is-debug; then
 		echo \#
@@ -73,9 +73,9 @@ function gogs-curl {
 		echo
 		sleep 1s
 		if [ -n "$data" ]; then
-			run_curl_and_log curl -d "$data" -H "Content-Type: application/json" -X $method "$address" --insecure
+			run_curl_and_log curl -d "$data" -H "Authorization: token $gogs_token" -H "Content-Type: application/json" -X $method "$address" --insecure
 		else
-			run_curl_and_log curl -X $method "$address" --insecure
+			run_curl_and_log curl -X $method -H "Authorization: token $gogs_token" "$address" --insecure
 		fi
 	fi
 }
