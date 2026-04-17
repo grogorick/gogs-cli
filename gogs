@@ -57,7 +57,6 @@ function run_curl_and_log {
 
 function gogs-curl {
 	method=$1
-	auth="?token=$gogs_token"
 	cmd=$2
 	data="$3"
 	address=$gogs_server"/api/v1"$cmd
